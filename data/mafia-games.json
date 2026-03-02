@@ -1,0 +1,27 @@
+{
+  "games": {
+    "sa5xxxhxp": {
+      "id": "sa5xxxhxp",
+      "hostId": "admin-vi4hdd4jsmp",
+      "players": [
+        {
+          "id": "admin-vi4hdd4jsmp",
+          "nickname": "Martin",
+          "isAlive": true
+        }
+      ],
+      "phase": "lobby",
+      "day": 0,
+      "entryFee": 100,
+      "prizePool": 100,
+      "nightActions": {},
+      "checkedPlayers": [],
+      "messages": [],
+      "createdAt": 1772296531977,
+      "lastUpdate": 1772296531977
+    }
+  },
+  "playerGames": {
+    "admin-vi4hdd4jsmp": "sa5xxxhxp"
+  }
+}

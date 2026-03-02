@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="{{ theme }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatChain - Общий чат</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="{{ 'dark-theme' if theme == 'dark' else '' }}">
+    <div class="app-container">
+        <header class="main-header">
+            <div class="header-content">
+                <div class="logo">
+                    <h1>Chat<span>Chain</span></h1>
+                </div>
+
+                <div class="header-nav">
+                    <a href="{{ url_for('index') }}" class="nav-link active">Чат</a>
+                    <a href="{{ url_for('game') }}" class="nav-link">Игра</a>
+                    <a href="{{ url_for('dating') }}" class="nav-link">Знакомства</a>
+                </div>
+
+                <div class="user-info">
+                    <span class="online-count">
+                        <span class="dot"></span>
+                        <span id="onlineCount">0</span>
+                    </span>
+                    <span class="user-nickname" id="userNickname">{{ nickname }}</span>
+                    <button class="theme-toggle" id="themeToggle">
+                        <span class="theme-icon">{{ '☀️' if theme == 'dark' else '🌙' }}</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="chat-main">
+            <div class="messages-container" id="messages">
+                {% for msg in messages %}
+                <div class="message {% if msg.user == nickname %}own{% else %}other{% endif %}">
+                    <div class="message-header">
+                        <span class="message-user">{{ msg.user }}</span>
+                        <span class="message-time">{{ msg.time }}</span>
+                    </div>
+                    <div class="message-content">
+                        {% if msg.type == 'image' %}
+                        <img src="{{ msg.content }}" alt="Image" onclick="window.open(this.src, '_blank')">
+                        {% else %}
+                        {{ msg.content }}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="typing-indicator" id="typingIndicator"></div>
+
+            <div class="input-toolbar">
+                <button class="toolbar-btn" id="emojiBtn">😊</button>
+                <button class="toolbar-btn" id="uploadBtn">📎</button>
+                <input type="file" id="fileInput" accept="image/*" style="display: none;">
+            </div>
+
+            <div class="input-container">
+                <input type="text" id="messageInput" placeholder="Введите сообщение..." autocomplete="off">
+                <button id="sendBtn">➤</button>
+            </div>
+        </main>
+
+        <div class="emoji-picker" id="emojiPicker">
+            <div class="emoji-grid">
+                <span>😊</span><span>😂</span><span>🤣</span><span>❤️</span><span>😍</span>
+                <span>😒</span><span>👌</span><span>👍</span><span>🔥</span><span>✨</span>
+                <span>🎉</span><span>💯</span><span>⚡</span><span>🎮</span><span>💰</span>
+                <span>🙏</span><span>💪</span><span>🤔</span><span>😴</span><span>🥳</span>
+                <span>😎</span><span>🥺</span><span>😅</span><span>😆</span><span>🤝</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

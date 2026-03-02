@@ -1,0 +1,104 @@
+{
+  "cells": [
+    {
+      "id": 1,
+      "level": 1,
+      "buyPrice": 100,
+      "payout": 150,
+      "cooldownHours": 24,
+      "status": "waiting",
+      "firstParticipant": {
+        "userId": "admin-vi4hdd4jsmp",
+        "nickname": "Martin",
+        "timestamp": 1772269494137
+      }
+    },
+    {
+      "id": 2,
+      "level": 2,
+      "buyPrice": 200,
+      "payout": 300,
+      "cooldownHours": 48,
+      "status": "available"
+    },
+    {
+      "id": 3,
+      "level": 3,
+      "buyPrice": 500,
+      "payout": 750,
+      "cooldownHours": 72,
+      "status": "available"
+    },
+    {
+      "id": 4,
+      "level": 4,
+      "buyPrice": 1000,
+      "payout": 1500,
+      "cooldownHours": 96,
+      "status": "available"
+    },
+    {
+      "id": 5,
+      "level": 5,
+      "buyPrice": 2000,
+      "payout": 3000,
+      "cooldownHours": 120,
+      "status": "available"
+    },
+    {
+      "id": 6,
+      "level": 6,
+      "buyPrice": 3000,
+      "payout": 4500,
+      "cooldownHours": 144,
+      "status": "available"
+    },
+    {
+      "id": 7,
+      "level": 7,
+      "buyPrice": 4000,
+      "payout": 6000,
+      "cooldownHours": 168,
+      "status": "available"
+    },
+    {
+      "id": 8,
+      "level": 8,
+      "buyPrice": 5000,
+      "payout": 7500,
+      "cooldownHours": 192,
+      "status": "available"
+    },
+    {
+      "id": 9,
+      "level": 9,
+      "buyPrice": 6000,
+      "payout": 9000,
+      "cooldownHours": 216,
+      "status": "available"
+    },
+    {
+      "id": 10,
+      "level": 10,
+      "buyPrice": 7000,
+      "payout": 10500,
+      "cooldownHours": 240,
+      "status": "available"
+    }
+  ],
+  "history": [],
+  "userCooldowns": {
+    "admin-vi4hdd4jsmp": [
+      {
+        "cellId": 1,
+        "lastBuyTime": 1772269494137
+      }
+    ]
+  },
+  "stats": {
+    "totalGames": 0,
+    "totalPayouts": 0,
+    "totalUsers": 1
+  },
+  "lastUpdate": 1772269494137
+}
