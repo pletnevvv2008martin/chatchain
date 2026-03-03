@@ -174,7 +174,7 @@ const FANTASY_MAPS = [
   { id: 'abyss_depths', name: '🌊 Бездна Глубин', theme: 'water', bgColor: '#0a2a3a', description: 'Подводные пещеры с затонувшими сокровищами' },
 ];
 
-const GAME_SERVER = process.env.NEXT_PUBLIC_GAME_SERVER || 'wss://179.61.145.218:2567';
+const GAME_SERVER = process.env.NEXT_PUBLIC_GAME_SERVER || 'ws://179.61.145.218:2567';
 
 // ============================================
 // КОМПОНЕНТЫ
