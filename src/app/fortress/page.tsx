@@ -8,18 +8,18 @@ import {
   Castle, Swords, Shield, Coins, TreeDeciduous, Mountain, Cog, Drumstick, Zap,
   Crown, Lock, X, ArrowLeft, RefreshCw, Volume2, VolumeX,
   Crosshair, Flag, Eye, Move, ZoomIn, ZoomOut, Heart, Skull, Chest,
-  Sparkles, Flame, Users, Map as MapIcon, Compass, Star, Trophy
+  Sparkles, Flame, Users, Map as MapIcon, Compass, Star, Trophy,
+  Tavern, Dice1, Dice2, Dice3, Dice4, Dice5, Dice6
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // ============================================
 // ТИПЫ
 // ============================================
 
 type RaceId = 'human' | 'elf' | 'dwarf' | 'darkElf' | 'undead' | 'werewolf' | 'orc' | 'mage' | 'vampire' | 'dragonborn';
-type NodeType = 'castle' | 'town' | 'village' | 'gold_mine' | 'stone_quarry' | 'lumber_mill' | 'iron_mine' | 'farm' | 'mana_well' | 'monster_lair' | 'teleport' | 'obelisk';
+type NodeType = 'castle' | 'town' | 'village' | 'gold_mine' | 'stone_quarry' | 'lumber_mill' | 'iron_mine' | 'farm' | 'mana_well' | 'monster_lair' | 'teleport' | 'obelisk' | 'tavern';
 
 interface Resources {
   gold: number;
@@ -29,30 +29,25 @@ interface Resources {
   food: number;
   mana: number;
   gems: number;
-  teleportScrolls: number;
-}
-
-interface Army {
-  warriors: number;
-  archers: number;
-  cavalry: number;
-  mages: number;
-  totalPower: number;
 }
 
 interface Hero {
   id: string;
   name: string;
-  currentNodeId: string;
+  class: string;
+  emoji: string;
   x: number;
   y: number;
   level: number;
   experience: number;
-  army: Army;
-  movementPoints: number;
-  maxMovement: number;
+  hp: number;
+  maxHp: number;
   attack: number;
   defense: number;
+  armyPower: number;
+  movementPoints: number;
+  maxMovement: number;
+  skills: string[];
 }
 
 interface MapNode {
@@ -63,7 +58,6 @@ interface MapNode {
   y: number;
   ownerId: string;
   ownerName: string;
-  heroId: string;
   garrison: number;
   defense: number;
   connections: string[];
@@ -74,25 +68,11 @@ interface MapNode {
   isTerritory: boolean;
 }
 
-interface Teleport {
-  id: string;
-  name: string;
-  x: number;
-  y: number;
-  targetMapId: string;
-  targetTeleportId: string;
-  cost: number;
-  type: 'teleport' | 'obelisk';
-}
-
 interface GameMap {
   id: string;
   name: string;
   theme: string;
-  maxPlayers: number;
-  currentPlayerCount: number;
   nodes: Map<string, MapNode>;
-  teleports: Map<string, Teleport>;
 }
 
 interface Player {
@@ -101,34 +81,12 @@ interface Player {
   race: RaceId;
   color: string;
   resources: Resources;
-  heroes: Map<string, Hero>;
-  buildings: Map<string, { id: string; level: number }>;
+  heroes: Hero[];
   castleNodeId: string;
-  territory: { centerX: number; centerY: number; radius: number; ownedNodes: string[]; defenseBonus: number };
   score: number;
   battlesWon: number;
   battlesLost: number;
-  online: boolean;
-  lastActive: number;
-  isRegistered: boolean;
   currentMapId: string;
-  stats: {
-    fortress: { totalGames: number; wins: number; losses: number; score: number; playTime: number };
-    mafia: { totalGames: number; wins: number; losses: number; score: number };
-    duel: { totalGames: number; wins: number; losses: number; score: number };
-    chain: { totalGames: number; wins: number; losses: number; score: number };
-    poker: { totalGames: number; wins: number; losses: number; score: number };
-  };
-}
-
-interface FortressState {
-  players: Map<string, Player>;
-  maps: Map<string, GameMap>;
-  chat: string[];
-  turn: number;
-  lastUpdate: number;
-  gamePhase: string;
-  activeMapId: string;
 }
 
 // ============================================
@@ -146,32 +104,92 @@ const RACE_COLORS: Record<RaceId, string> = {
   vampire: '#dc2626', dragonborn: '#f97316'
 };
 
-const NODE_CONFIG: Record<NodeType, { emoji: string; name: string }> = {
-  castle: { emoji: '🏰', name: 'Замок' },
-  town: { emoji: '🏘️', name: 'Город' },
-  village: { emoji: '🏠', name: 'Деревня' },
-  gold_mine: { emoji: '💰', name: 'Золотая шахта' },
-  stone_quarry: { emoji: '🪨', name: 'Каменоломня' },
-  lumber_mill: { emoji: '🪵', name: 'Лесопилка' },
-  iron_mine: { emoji: '⚙️', name: 'Железная шахта' },
-  farm: { emoji: '🌾', name: 'Ферма' },
-  mana_well: { emoji: '🔮', name: 'Источник маны' },
-  monster_lair: { emoji: '🐉', name: 'Логово монстров' },
-  teleport: { emoji: '🌀', name: 'Телепорт' },
-  obelisk: { emoji: '🗼', name: 'Обелиск' },
+// Красивые конфиги для объектов
+const NODE_STYLES: Record<string, {
+  emoji: string;
+  name: string;
+  color: string;
+  glowColor: string;
+  description: string;
+  icon: string;
+}> = {
+  castle: { 
+    emoji: '🏰', name: 'Замок', color: '#8b5cf6', glowColor: '#a78bfa',
+    description: 'Ваш главный оплот', icon: '👑'
+  },
+  town: { 
+    emoji: '🏘️', name: 'Город', color: '#3b82f6', glowColor: '#60a5fa',
+    description: 'Приносит +20 золота/ход', icon: '🏪'
+  },
+  village: { 
+    emoji: '🏠', name: 'Деревня', color: '#22c55e', glowColor: '#4ade80',
+    description: 'Приносит +15 еды/ход', icon: '🌾'
+  },
+  gold_mine: { 
+    emoji: '💰', name: 'Золотая шахта', color: '#eab308', glowColor: '#fde047',
+    description: 'Приносит +30 золота/ход', icon: '⛏️'
+  },
+  stone_quarry: { 
+    emoji: '🪨', name: 'Каменоломня', color: '#6b7280', glowColor: '#9ca3af',
+    description: 'Приносит +25 камня/ход', icon: '🔨'
+  },
+  lumber_mill: { 
+    emoji: '🪵', name: 'Лесопилка', color: '#92400e', glowColor: '#d97706',
+    description: 'Приносит +20 дерева/ход', icon: '🪓'
+  },
+  iron_mine: { 
+    emoji: '⚙️', name: 'Железный рудник', color: '#475569', glowColor: '#64748b',
+    description: 'Приносит +15 железа/ход', icon: '🔧'
+  },
+  farm: { 
+    emoji: '🌾', name: 'Ферма', color: '#84cc16', glowColor: '#a3e635',
+    description: 'Приносит +25 еды/ход', icon: '🐄'
+  },
+  mana_well: { 
+    emoji: '🔮', name: 'Источник маны', color: '#8b5cf6', glowColor: '#c4b5fd',
+    description: 'Приносит +10 маны/ход', icon: '✨'
+  },
+  monster_lair: { 
+    emoji: '🐉', name: 'Логово монстров', color: '#dc2626', glowColor: '#f87171',
+    description: 'Победите монстров для награды', icon: '⚔️'
+  },
+  teleport: { 
+    emoji: '🌀', name: 'Телепорт', color: '#06b6d4', glowColor: '#22d3ee',
+    description: 'Мгновенное перемещение', icon: '💫'
+  },
+  obelisk: { 
+    emoji: '🗼', name: 'Обелиск', color: '#7c3aed', glowColor: '#a78bfa',
+    description: 'Переход на другую карту', icon: '🌟'
+  },
+  tavern: { 
+    emoji: '🍺', name: 'Таверна', color: '#f59e0b', glowColor: '#fbbf24',
+    description: 'Призовите героя бесплатно!', icon: '🎲'
+  },
 };
 
+// Классы героев для таверны
+const HERO_CLASSES = [
+  { class: 'warrior', name: 'Воин', emoji: '⚔️', hp: 150, attack: 25, defense: 15, skill: 'Мощный удар' },
+  { class: 'mage', name: 'Маг', emoji: '🔮', hp: 80, attack: 35, defense: 5, skill: 'Огненный шар' },
+  { class: 'ranger', name: 'Следопыт', emoji: '🏹', hp: 100, attack: 20, defense: 10, skill: 'Меткий выстрел' },
+  { class: 'paladin', name: 'Паладин', emoji: '🛡️', hp: 130, attack: 18, defense: 20, skill: 'Святой свет' },
+  { class: 'rogue', name: 'Разбойник', emoji: '🗡️', hp: 90, attack: 30, defense: 8, skill: 'Скрытность' },
+  { class: 'necromancer', name: 'Некромант', emoji: '💀', hp: 85, attack: 32, defense: 6, skill: 'Воскрешение' },
+  { class: 'druid', name: 'Друид', emoji: '🌿', hp: 110, attack: 22, defense: 12, skill: 'Призыв зверей' },
+  { class: 'berserker', name: 'Берсерк', emoji: '🪓', hp: 140, attack: 35, defense: 5, skill: 'Ярость' },
+];
+
 const FANTASY_MAPS = [
-  { id: 'green_valley', name: '🌿 Зелёная Долина', theme: 'forest', bgColor: '#1a472a', description: 'Мирные земли с богатыми ресурсами' },
-  { id: 'frozen_peaks', name: '❄️ Ледяные Вершины', theme: 'ice', bgColor: '#1a3a5c', description: 'Холодные горы с редкими кристаллами' },
-  { id: 'volcanic_lands', name: '🌋 Вулканические Земли', theme: 'fire', bgColor: '#4a1a1a', description: 'Опасные земли с редкой магмой' },
-  { id: 'dark_swamp', name: '🕳️ Тёмное Болото', theme: 'swamp', bgColor: '#1a3a2a', description: 'Зловещие топи с древними артефактами' },
-  { id: 'desert_dunes', name: '🏜️ Пустынные Дюны', theme: 'desert', bgColor: '#5a4a2a', description: 'Бескрайние пески с древними гробницами' },
-  { id: 'enchanted_forest', name: '🧚 Зачарованный Лес', theme: 'magic', bgColor: '#2a1a4a', description: 'Магический лес с феями и эльфами' },
-  { id: 'undead_realm', name: '💀 Царство Нежити', theme: 'undead', bgColor: '#1a1a2a', description: 'Земли проклятых с древними сокровищами' },
-  { id: 'dragon_lair', name: '🐉 Логово Драконов', theme: 'dragon', bgColor: '#3a1a1a', description: 'Огненные земли с несметными сокровищами' },
-  { id: 'celestial_peaks', name: '☁️ Небесные Вершины', theme: 'sky', bgColor: '#1a2a4a', description: 'Парящие острова с небесными ресурсами' },
-  { id: 'abyss_depths', name: '🌊 Бездна Глубин', theme: 'water', bgColor: '#0a2a3a', description: 'Подводные пещеры с затонувшими сокровищами' },
+  { id: 'green_valley', name: '🌿 Зелёная Долина', theme: 'forest', bgColor: '#0a1f0a', particleColor: '#22c55e' },
+  { id: 'frozen_peaks', name: '❄️ Ледяные Вершины', theme: 'ice', bgColor: '#0a1a2e', particleColor: '#60a5fa' },
+  { id: 'volcanic_lands', name: '🌋 Вулканические Земли', theme: 'fire', bgColor: '#1f0a0a', particleColor: '#f97316' },
+  { id: 'dark_swamp', name: '🕳️ Тёмное Болото', theme: 'swamp', bgColor: '#0a1a12', particleColor: '#84cc16' },
+  { id: 'desert_dunes', name: '🏜️ Пустынные Дюны', theme: 'desert', bgColor: '#1f1a0a', particleColor: '#fbbf24' },
+  { id: 'enchanted_forest', name: '🧚 Зачарованный Лес', theme: 'magic', bgColor: '#1a0a2e', particleColor: '#a78bfa' },
+  { id: 'undead_realm', name: '💀 Царство Нежити', theme: 'undead', bgColor: '#0f0f1a', particleColor: '#6b7280' },
+  { id: 'dragon_lair', name: '🐉 Логово Драконов', theme: 'dragon', bgColor: '#1a0a0a', particleColor: '#dc2626' },
+  { id: 'celestial_peaks', name: '☁️ Небесные Вершины', theme: 'sky', bgColor: '#0a1a2e', particleColor: '#e0f2fe' },
+  { id: 'abyss_depths', name: '🌊 Бездна Глубин', theme: 'water', bgColor: '#0a0f1f', particleColor: '#0ea5e9' },
 ];
 
 const GAME_SERVER = process.env.NEXT_PUBLIC_GAME_SERVER || 'ws://179.61.145.218:2567';
@@ -180,99 +198,305 @@ const GAME_SERVER = process.env.NEXT_PUBLIC_GAME_SERVER || 'ws://179.61.145.218:
 // КОМПОНЕНТЫ
 // ============================================
 
+// Анимированные частицы на фоне
+function ParticleBackground({ color }: { color: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    const particles: { x: number; y: number; size: number; speedY: number; speedX: number; opacity: number }[] = [];
+    
+    for (let i = 0; i < 50; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        size: Math.random() * 3 + 1,
+        speedY: Math.random() * 0.5 + 0.1,
+        speedX: (Math.random() - 0.5) * 0.3,
+        opacity: Math.random() * 0.5 + 0.2
+      });
+    }
+    
+    let animationId: number;
+    
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      particles.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = `${color}${Math.floor(p.opacity * 255).toString(16).padStart(2, '0')}`;
+        ctx.fill();
+        
+        p.y -= p.speedY;
+        p.x += p.speedX;
+        
+        if (p.y < -10) {
+          p.y = canvas.height + 10;
+          p.x = Math.random() * canvas.width;
+        }
+      });
+      
+      animationId = requestAnimationFrame(animate);
+    };
+    
+    animate();
+    
+    return () => cancelAnimationFrame(animationId);
+  }, [color]);
+  
+  return <canvas ref={canvasRef} className="particle-canvas" />;
+}
+
+// Анимированный узел карты
 function MapNodeComponent({
-  node, isSelected, isMyNode, isEnemyNode, myColor, playerHere, onClick
+  node, isSelected, isMyNode, isEnemyNode, myColor, hasHero, onClick
 }: {
   node: MapNode;
   isSelected: boolean;
   isMyNode: boolean;
   isEnemyNode: boolean;
   myColor: string;
-  playerHere?: { name: string; color: string; emoji: string };
+  hasHero: boolean;
   onClick: () => void;
 }) {
-  const config = NODE_CONFIG[node.type] || NODE_CONFIG.village;
+  const style = NODE_STYLES[node.type] || NODE_STYLES.village;
+  const [hover, setHover] = useState(false);
 
   return (
-    <g onClick={onClick} style={{ cursor: 'pointer' }}>
-      {/* Фон узла */}
+    <g 
+      onClick={onClick} 
+      style={{ cursor: 'pointer' }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      {/* Внешнее свечение */}
       <circle
         cx={node.x}
         cy={node.y}
-        r={35}
-        fill={isMyNode ? myColor : isEnemyNode ? '#dc2626' : node.isTerritory ? '#22c55e' : '#2a2a3a'}
-        stroke={isSelected ? '#ffd700' : node.ownerId ? RACE_COLORS.human : '#444'}
-        strokeWidth={isSelected ? 3 : 1}
-        opacity={0.9}
+        r={isSelected ? 55 : 50}
+        fill="none"
+        stroke={isMyNode ? myColor : isEnemyNode ? '#dc2626' : style.glowColor}
+        strokeWidth={isSelected ? 4 : 2}
+        opacity={hover || isSelected ? 0.8 : 0.3}
+        className="node-glow"
       />
-
-      {/* Иконка */}
-      <text x={node.x} y={node.y + 5} textAnchor="middle" fontSize={24}>
-        {node.monsterPower > 0 ? '🐉' : config.emoji}
+      
+      {/* Основной круг */}
+      <circle
+        cx={node.x}
+        cy={node.y}
+        r={42}
+        fill={`url(#nodeGradient-${node.type})`}
+        stroke={isSelected ? '#ffd700' : isMyNode ? myColor : style.color}
+        strokeWidth={isSelected ? 4 : 2}
+        className="node-body"
+      />
+      
+      {/* Иконка объекта */}
+      <text 
+        x={node.x} 
+        y={node.y + 8} 
+        textAnchor="middle" 
+        fontSize={32}
+        className="node-emoji"
+      >
+        {style.emoji}
       </text>
-
-      {/* Информация о монстре */}
+      
+      {/* Индикатор монстра */}
       {node.monsterPower > 0 && (
-        <text x={node.x} y={node.y + 50} textAnchor="middle" fontSize={10} fill="#ef4444">
-          ⚔️{node.monsterPower}
-        </text>
-      )}
-
-      {/* Гарнизон */}
-      {node.garrison > 0 && (
-        <text x={node.x} y={node.y - 25} textAnchor="middle" fontSize={10} fill="#22c55e">
-          🛡️{node.garrison}
-        </text>
-      )}
-
-      {/* Игрок на узле */}
-      {playerHere && (
         <g>
-          <circle cx={node.x + 25} cy={node.y - 25} r={15} fill={playerHere.color} />
-          <text x={node.x + 25} y={playerHere.y - 20} textAnchor="middle" fontSize={14}>
-            {playerHere.emoji}
+          <circle cx={node.x + 30} cy={node.y - 30} r={18} fill="#dc2626" opacity={0.9} />
+          <text x={node.x + 30} y={node.y - 25} textAnchor="middle" fontSize={14} fill="white">⚔️</text>
+          <text x={node.x + 30} y={node.y - 10} textAnchor="middle" fontSize={10} fill="white">{node.monsterPower}</text>
+        </g>
+      )}
+      
+      {/* Индикатор гарнизона */}
+      {node.garrison > 0 && (
+        <g>
+          <circle cx={node.x - 30} cy={node.y - 30} r={16} fill={isMyNode ? '#22c55e' : '#6b7280'} opacity={0.9} />
+          <text x={node.x - 30} y={node.y - 26} textAnchor="middle" fontSize={12} fill="white">🛡️</text>
+        </g>
+      )}
+      
+      {/* Герой на узле */}
+      {hasHero && (
+        <g className="hero-marker">
+          <circle cx={node.x} cy={node.y + 55} r={20} fill="#fbbf24" stroke="#f59e0b" strokeWidth={2} />
+          <text x={node.x} y={node.y + 60} textAnchor="middle" fontSize={18}>⚔️</text>
+        </g>
+      )}
+      
+      {/* Название при наведении */}
+      {(hover || isSelected) && (
+        <g>
+          <rect
+            x={node.x - 60}
+            y={node.y - 75}
+            width={120}
+            height={24}
+            rx={8}
+            fill="rgba(0,0,0,0.8)"
+            stroke={style.color}
+          />
+          <text
+            x={node.x}
+            y={node.y - 58}
+            textAnchor="middle"
+            fontSize={12}
+            fill="white"
+            fontWeight="bold"
+          >
+            {style.name}
           </text>
         </g>
       )}
-
+      
       {/* Владелец */}
       {node.ownerName && (
-        <text x={node.x} y={node.y + 55} textAnchor="middle" fontSize={9} fill="#aaa">
-          {node.ownerName.slice(0, 10)}
+        <text x={node.x} y={node.y + 75} textAnchor="middle" fontSize={10} fill="#888">
+          {node.ownerName.slice(0, 12)}
         </text>
       )}
+      
+      {/* Градиент для узла */}
+      <defs>
+        <radialGradient id={`nodeGradient-${node.type}`} cx="50%" cy="30%" r="70%">
+          <stop offset="0%" stopColor={style.glowColor} />
+          <stop offset="100%" stopColor={style.color} />
+        </radialGradient>
+      </defs>
     </g>
   );
 }
 
-function TeleportComponent({
-  teleport, onClick, isSelected
+// Компонент Таверны
+function TavernModal({
+  isOpen, onClose, onSummon, summonedHero
 }: {
-  teleport: Teleport;
-  onClick: () => void;
-  isSelected: boolean;
+  isOpen: boolean;
+  onClose: () => void;
+  onSummon: () => void;
+  summonedHero: Hero | null;
 }) {
+  const [rolling, setRolling] = useState(false);
+  const [displayHero, setDisplayHero] = useState(0);
+
+  const handleSummon = () => {
+    setRolling(true);
+    let count = 0;
+    const interval = setInterval(() => {
+      setDisplayHero(Math.floor(Math.random() * HERO_CLASSES.length));
+      count++;
+      if (count > 15) {
+        clearInterval(interval);
+        setRolling(false);
+        onSummon();
+      }
+    }, 100);
+  };
+
+  if (!isOpen) return null;
+
   return (
-    <g onClick={onClick} style={{ cursor: 'pointer' }}>
-      <circle
-        cx={teleport.x}
-        cy={teleport.y}
-        r={30}
-        fill={teleport.type === 'obelisk' ? '#8b5cf6' : '#06b6d4'}
-        stroke={isSelected ? '#ffd700' : '#fff'}
-        strokeWidth={isSelected ? 3 : 1}
-        opacity={0.8}
-      />
-      <text x={teleport.x} y={teleport.y + 5} textAnchor="middle" fontSize={24}>
-        {teleport.type === 'obelisk' ? '🗼' : '🌀'}
-      </text>
-      <text x={teleport.x} y={teleport.y + 45} textAnchor="middle" fontSize={10} fill="#fff">
-        {teleport.cost}💰
-      </text>
-    </g>
+    <div className="tavern-modal" onClick={onClose}>
+      <div className="tavern-content" onClick={e => e.stopPropagation()}>
+        <div className="tavern-header">
+          <h2>🍺 Таверна</h2>
+          <button onClick={onClose}><X size={24} /></button>
+        </div>
+        
+        <div className="tavern-body">
+          <p className="tavern-description">
+            Добро пожаловать, путник! Здесь ты можешь призвать героя себе на службу.
+            Первое посещение — бесплатно!
+          </p>
+          
+          {summonedHero ? (
+            <div className="summoned-hero">
+              <div className="hero-card">
+                <div className="hero-emoji">{summonedHero.emoji}</div>
+                <h3>{summonedHero.name}</h3>
+                <p className="hero-class">{summonedHero.class}</p>
+                <div className="hero-stats">
+                  <span>❤️ {summonedHero.hp}/{summonedHero.maxHp}</span>
+                  <span>⚔️ {summonedHero.attack}</span>
+                  <span>🛡️ {summonedHero.defense}</span>
+                </div>
+                <p className="hero-skill">✨ {summonedHero.skills[0]}</p>
+              </div>
+              <Button onClick={onClose} className="close-btn">Отправиться в путь!</Button>
+            </div>
+          ) : (
+            <div className="summon-area">
+              {rolling ? (
+                <div className="rolling-hero">
+                  <span className="hero-emoji large">{HERO_CLASSES[displayHero].emoji}</span>
+                  <div className="rolling-dots">
+                    <span>.</span><span>.</span><span>.</span>
+                  </div>
+                </div>
+              ) : (
+                <Button onClick={handleSummon} className="summon-btn">
+                  <Dice1 size={20} />
+                  <span>Призвать героя!</span>
+                  <span className="free-badge">БЕСПЛАТНО</span>
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
+// Компонент боя
+function BattleModal({
+  isOpen, onClose, result
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  result: { won: boolean; message: string; rewards: Resources } | null;
+}) {
+  if (!isOpen || !result) return null;
+
+  return (
+    <div className="battle-modal" onClick={onClose}>
+      <div className="battle-content" onClick={e => e.stopPropagation()}>
+        <div className={`battle-result ${result.won ? 'victory' : 'defeat'}`}>
+          <div className="result-icon">
+            {result.won ? '🏆' : '💀'}
+          </div>
+          <h2>{result.won ? 'ПОБЕДА!' : 'ПОРАЖЕНИЕ'}</h2>
+          <p>{result.message}</p>
+          {result.won && (
+            <div className="rewards">
+              {Object.entries(result.rewards).map(([key, value]) => value > 0 && (
+                <span key={key} className="reward-item">
+                  {key === 'gold' ? '💰' : key === 'food' ? '🍖' : '⭐'} +{value}
+                </span>
+              ))}
+            </div>
+          )}
+          <Button onClick={onClose}>Продолжить</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Музыка
 function BackgroundMusic() {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -319,40 +543,110 @@ export default function FortressPage() {
   // Пользователь
   const [userId, setUserId] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
-  const [isRegistered, setIsRegistered] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
 
   // Сеть
-  const [client, setClient] = useState<Client | null>(null);
-  const [room, setRoom] = useState<Room<FortressState> | null>(null);
+  const [room, setRoom] = useState<Room | null>(null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string>('');
 
-  // Состояние игры
-  const [state, setState] = useState<FortressState | null>(null);
-  const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
+  // Игра
+  const [player, setPlayer] = useState<Player | null>(null);
   const [currentMap, setCurrentMap] = useState<GameMap | null>(null);
   const [selectedNode, setSelectedNode] = useState<MapNode | null>(null);
-  const [selectedTeleport, setSelectedTeleport] = useState<Teleport | null>(null);
-  const [activeTab, setActiveTab] = useState('map');
+  const [hero, setHero] = useState<Hero | null>(null);
+  const [heroLocation, setHeroLocation] = useState<string | null>(null);
 
   // UI
   const [showRaceSelect, setShowRaceSelect] = useState(false);
-  const [showMapSelect, setShowMapSelect] = useState(false);
+  const [showTavern, setShowTavern] = useState(false);
   const [race, setRace] = useState<RaceId>('human');
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [summonedHero, setSummonedHero] = useState<Hero | null>(null);
+  const [battleResult, setBattleResult] = useState<{ won: boolean; message: string; rewards: Resources } | null>(null);
 
-  // Чат
-  const [chatMessages, setChatMessages] = useState<string[]>([]);
-  const [chatInput, setChatInput] = useState('');
+  // Локальная игра (оффлайн режим) - определяется до использования
+  const initLocalGame = useCallback(() => {
+    const mapId = 'green_valley';
+    const nodes = new Map<string, MapNode>();
+    
+    const nodeTypes: NodeType[] = ['town', 'village', 'gold_mine', 'farm', 'lumber_mill', 'monster_lair', 'tavern'];
+    let nodeId = 0;
+    
+    for (let row = 0; row < 6; row++) {
+      for (let col = 0; col < 8; col++) {
+        const id = `node_${nodeId}`;
+        const x = 100 + col * 120 + (row % 2) * 60;
+        const y = 100 + row * 100;
+        
+        let type: NodeType = row === 3 && col === 4 ? 'castle' : nodeTypes[Math.floor(Math.random() * nodeTypes.length)];
+        
+        const node: MapNode = {
+          id,
+          type,
+          name: NODE_STYLES[type]?.name || 'Unknown',
+          x,
+          y,
+          ownerId: row === 3 && col === 4 ? userId : '',
+          ownerName: row === 3 && col === 4 ? userName : '',
+          garrison: row === 3 && col === 4 ? 50 : 0,
+          defense: 20,
+          connections: [],
+          goldReward: type === 'monster_lair' ? Math.floor(Math.random() * 500) + 200 : 0,
+          monsterPower: type === 'monster_lair' ? Math.floor(Math.random() * 200) + 50 : 0,
+          monsterType: type === 'monster_lair' ? 'Дракон' : '',
+          terrain: '🌿',
+          isTerritory: false
+        };
+        
+        nodes.set(id, node);
+        nodeId++;
+      }
+    }
+    
+    nodes.forEach((node, id) => {
+      const num = parseInt(id.split('_')[1]);
+      const row = Math.floor(num / 8);
+      const col = num % 8;
+      
+      if (col < 7) node.connections.push(`node_${num + 1}`);
+      if (col > 0) node.connections.push(`node_${num - 1}`);
+      if (row < 5) node.connections.push(`node_${num + 8}`);
+      if (row > 0) node.connections.push(`node_${num - 8}`);
+    });
+    
+    const map: GameMap = {
+      id: mapId,
+      name: '🌿 Зелёная Долина',
+      theme: 'forest',
+      nodes
+    };
+    
+    const localPlayer: Player = {
+      id: userId,
+      name: userName,
+      race: 'human',
+      color: RACE_COLORS.human,
+      resources: { gold: 500, stone: 200, wood: 200, iron: 100, food: 300, mana: 50, gems: 0 },
+      heroes: [],
+      castleNodeId: 'node_28',
+      score: 0,
+      battlesWon: 0,
+      battlesLost: 0,
+      currentMapId: mapId
+    };
+    
+    setPlayer(localPlayer);
+    setCurrentMap(map);
+    setConnected(true);
+    setLoading(false);
+    setShowRaceSelect(true);
+  }, [userId, userName]);
 
-  // ============================================
-  // ЗАГРУЗКА ПОЛЬЗОВАТЕЛЯ
-  // ============================================
-
+  // Загрузка пользователя
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const storedUser = localStorage.getItem('chatchain_user');
@@ -362,36 +656,21 @@ export default function FortressPage() {
       setUserId(user.id);
        
       setUserName(user.nickname);
-       
-      setIsRegistered(true);
     } else {
-      // Гость
-      const guestId = 'guest-' + Date.now();
-       
-      setUserId(guestId);
-       
-      setUserName('Гость');
-       
-      setIsRegistered(false);
+      router.push('/');
     }
-  }, []);
+  }, [router]);
 
-  // ============================================
-  // ПОДКЛЮЧЕНИЕ К СЕРВЕРУ
-  // ============================================
-
+  // Подключение к серверу
   useEffect(() => {
     if (!userId || !userName) return;
 
     const connectToServer = async () => {
       try {
         const gameClient = new Client(GAME_SERVER);
-        setClient(gameClient);
-
-        const gameRoom = await gameClient.joinOrCreate<FortressState>('fortress', {
+        const gameRoom = await gameClient.joinOrCreate('fortress', {
           name: userName,
           userId: userId,
-          isRegistered: isRegistered,
           mapId: 'green_valley'
         });
 
@@ -399,162 +678,207 @@ export default function FortressPage() {
         setConnected(true);
         setLoading(false);
 
-        // Обработка изменений состояния
         gameRoom.onStateChange((newState: any) => {
-          console.log('State update:', newState);
-          setState(newState);
-
-          // Проверяем что players существует
           if (newState.players && gameRoom.sessionId) {
-            const player = newState.players.get(gameRoom.sessionId);
-            if (player) {
-              setCurrentPlayer(player);
-              setRace(player.race);
-
-              if (newState.maps && player.currentMapId) {
-                const map = newState.maps.get(player.currentMapId);
-                if (map) {
-                  setCurrentMap(map);
-                }
+            const p = newState.players.get(gameRoom.sessionId);
+            if (p) {
+              setPlayer(p);
+              setRace(p.race);
+              
+              if (newState.maps && p.currentMapId) {
+                const map = newState.maps.get(p.currentMapId);
+                if (map) setCurrentMap(map);
+              }
+              
+              if (p.heroes && p.heroes.length > 0) {
+                setHero(p.heroes[0]);
               }
             }
           }
         });
 
-        // Системные сообщения
-        gameRoom.onMessage('system_message', (msg) => {
-          setChatMessages(prev => [...prev.slice(-50), msg.content]);
-        });
-
-        gameRoom.onMessage('error', (msg) => {
+        gameRoom.onMessage('error', (msg: any) => {
           setError(msg.message);
           setTimeout(() => setError(''), 3000);
         });
 
-        gameRoom.onMessage('state_sync', (msg) => {
-          console.log('State sync:', msg);
+        gameRoom.onMessage('hero_summoned', (msg: any) => {
+          setSummonedHero(msg.hero);
+          setHero(msg.hero);
         });
 
-        gameRoom.onMessage('redirect_map', (msg) => {
-          console.log('Redirected to map:', msg.mapId);
+        gameRoom.onMessage('battle_result', (msg: any) => {
+          setBattleResult(msg);
         });
 
-        gameRoom.onMessage('map_changed', (msg) => {
-          console.log('Map changed:', msg.mapId);
-        });
-
-        // Ошибки соединения
         gameRoom.onError((code, message) => {
-          console.error('Room error:', code, message);
           setError(`Ошибка: ${message}`);
-          setConnected(false);
-        });
-
-        gameRoom.onLeave((code) => {
-          console.log('Left room:', code);
           setConnected(false);
         });
 
       } catch (err: any) {
         console.error('Connection error:', err);
-        setError(`Не удалось подключиться: ${err.message}`);
-        setLoading(false);
+        // Оффлайн режим - создаём локальную игру
+        initLocalGame();
       }
     };
 
     connectToServer();
+  }, [userId, userName, initLocalGame]);
 
-    return () => {
-      if (room) {
-        room.leave();
-      }
-    };
-  }, [userId, userName, isRegistered]);
-
-  // ============================================
-  // ОБРАБОТЧИКИ ДЕЙСТВИЙ
-  // ============================================
-
+  // Выбор расы
   const selectRace = (raceId: RaceId) => {
-    if (room) {
-      room.send('select_race', raceId);
-    }
     setRace(raceId);
     localStorage.setItem('chatchain_fortress_race', raceId);
     setShowRaceSelect(false);
+    if (room) {
+      room.send('select_race', raceId);
+    }
   };
 
+  // Призыв героя
+  const summonHero = () => {
+    const heroClass = HERO_CLASSES[Math.floor(Math.random() * HERO_CLASSES.length)];
+    const newHero: Hero = {
+      id: `hero_${Date.now()}`,
+      name: `${heroClass.name} ${userName}`,
+      class: heroClass.name,
+      emoji: heroClass.emoji,
+      x: 0,
+      y: 0,
+      level: 1,
+      experience: 0,
+      hp: heroClass.hp,
+      maxHp: heroClass.hp,
+      attack: heroClass.attack,
+      defense: heroClass.defense,
+      armyPower: 100,
+      movementPoints: 5,
+      maxMovement: 5,
+      skills: [heroClass.skill]
+    };
+    
+    setSummonedHero(newHero);
+    setHero(newHero);
+    
+    if (room) {
+      room.send('summon_hero', { heroClass: heroClass.class });
+    }
+    
+    // Ставим героя в замок
+    if (player && currentMap) {
+      const castle = Array.from(currentMap.nodes.values()).find(n => n.type === 'castle' && n.ownerId === userId);
+      if (castle) {
+        setHeroLocation(castle.id);
+      }
+    }
+  };
+
+  // Движение героя
   const moveHero = (targetNodeId: string) => {
-    if (!room || !currentPlayer) return;
-    const heroId = Array.from(currentPlayer.heroes.keys())[0];
-    if (heroId) {
-      room.send('move_hero', { heroId, targetNodeId });
+    if (!hero || hero.movementPoints <= 0) return;
+    
+    setHeroLocation(targetNodeId);
+    setHero(prev => prev ? { ...prev, movementPoints: prev.movementPoints - 1 } : null);
+    
+    if (room) {
+      room.send('move_hero', { heroId: hero.id, targetNodeId });
     }
+  };
+
+  // Атака
+  const attackNode = (node: MapNode) => {
+    if (!hero) return;
+    
+    if (node.monsterPower > 0) {
+      // Бой с монстром
+      const heroPower = hero.attack + hero.armyPower * 0.5;
+      const won = heroPower > node.monsterPower * (0.5 + Math.random() * 0.5);
+      
+      if (won) {
+        const losses = Math.floor(hero.hp * 0.2);
+        setHero(prev => prev ? { 
+          ...prev, 
+          hp: Math.max(1, prev.hp - losses),
+          experience: prev.experience + node.monsterPower
+        } : null);
+        
+        setBattleResult({
+          won: true,
+          message: `Победа над ${node.monsterType}!`,
+          rewards: { gold: node.goldReward, food: 50, iron: 0, stone: 0, wood: 0, mana: 0, gems: 0 }
+        });
+        
+        // Обновляем карту
+        if (currentMap) {
+          const updatedNode = currentMap.nodes.get(node.id);
+          if (updatedNode) {
+            updatedNode.monsterPower = 0;
+            updatedNode.type = 'village';
+          }
+        }
+      } else {
+        setHero(prev => prev ? { 
+          ...prev, 
+          hp: Math.max(1, prev.hp - 50)
+        } : null);
+        
+        setBattleResult({
+          won: false,
+          message: `${node.monsterType} оказался сильнее!`,
+          rewards: { gold: 0, food: 0, iron: 0, stone: 0, wood: 0, mana: 0, gems: 0 }
+        });
+      }
+    }
+    
     setSelectedNode(null);
   };
 
-  const attackNode = (targetNodeId: string) => {
-    if (!room || !currentPlayer) return;
-    const heroId = Array.from(currentPlayer.heroes.keys())[0];
-    if (heroId) {
-      room.send('attack_node', { heroId, targetNodeId });
+  // Захват узла
+  const captureNode = (node: MapNode) => {
+    if (!hero || heroLocation !== node.id) return;
+    
+    if (currentMap) {
+      const updatedNode = currentMap.nodes.get(node.id);
+      if (updatedNode) {
+        updatedNode.ownerId = userId;
+        updatedNode.ownerName = userName;
+        updatedNode.garrison = 10;
+      }
     }
+    
     setSelectedNode(null);
   };
 
-  const captureNode = (targetNodeId: string) => {
-    if (!room || !currentPlayer) return;
-    const heroId = Array.from(currentPlayer.heroes.keys())[0];
-    if (heroId) {
-      room.send('capture_node', { heroId, targetNodeId });
+  // Следующий ход
+  const nextTurn = () => {
+    if (hero) {
+      setHero(prev => prev ? { ...prev, movementPoints: prev.maxMovement } : null);
     }
-    setSelectedNode(null);
-  };
-
-  const teleportHero = (teleportId: string) => {
-    if (!room || !currentPlayer) return;
-    const heroId = Array.from(currentPlayer.heroes.keys())[0];
-    if (heroId) {
-      room.send('use_teleport', { heroId, teleportId });
-    }
-    setSelectedTeleport(null);
-  };
-
-  const changeMap = (targetMapId: string) => {
-    if (!room) return;
-    room.send('change_map', { obeliskId: `${currentPlayer?.currentMapId}_obelisk`, targetMapId });
-    setShowMapSelect(false);
-    setSelectedTeleport(null);
-  };
-
-  const endTurn = () => {
-    if (room) {
-      room.send('end_turn');
-    }
-  };
-
-  const recruit = (unitType: string, count: number) => {
-    if (room) {
-      room.send('recruit', { unitType, count });
+    
+    // Начисляем ресурсы
+    if (player && currentMap) {
+      let goldBonus = 50;
+      let foodBonus = 20;
+      
+      currentMap.nodes.forEach(node => {
+        if (node.ownerId === userId) {
+          if (node.type === 'gold_mine') goldBonus += 30;
+          if (node.type === 'farm') foodBonus += 25;
+          if (node.type === 'town') goldBonus += 20;
+        }
+      });
+      
+      setPlayer(prev => prev ? {
+        ...prev,
+        resources: {
+          ...prev.resources,
+          gold: prev.resources.gold + goldBonus,
+          food: prev.resources.food + foodBonus
+        }
+      } : null);
     }
   };
-
-  const build = (buildingType: string) => {
-    if (room) {
-      room.send('build', { buildingType });
-    }
-  };
-
-  const sendChat = () => {
-    if (room && chatInput.trim()) {
-      room.send('chat', { content: chatInput });
-      setChatInput('');
-    }
-  };
-
-  // ============================================
-  // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-  // ============================================
 
   const formatNumber = (num: number): string => {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -562,97 +886,66 @@ export default function FortressPage() {
     return Math.floor(num).toString();
   };
 
-  const getMapTemplate = (mapId: string) => {
-    return FANTASY_MAPS.find(m => m.id === mapId);
-  };
+  const mapTemplate = FANTASY_MAPS.find(m => m.id === player?.currentMapId) || FANTASY_MAPS[0];
 
-  // ============================================
-  // РЕНДЕРИНГ
-  // ============================================
-
-  // Проверка выбора расы
-  useEffect(() => {
-    if (!userId || !connected) return;
-    const storedRace = localStorage.getItem('chatchain_fortress_race');
-    if (!storedRace && currentPlayer) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setShowRaceSelect(true);
-    }
-  }, [userId, connected, currentPlayer]);
-
-  // Выбор расы
-  if (showRaceSelect && connected) {
+  // Рендер
+  if (showRaceSelect) {
     return (
       <div className="fortress-page race-select">
-        <h1>🏰 Выберите расу</h1>
-        <div className="race-grid">
-          {Object.entries(RACE_EMOJIS).map(([id, emoji]) => (
-            <div key={id} className="race-card" onClick={() => selectRace(id as RaceId)}>
-              <span className="race-emoji">{emoji}</span>
-              <span className="race-name">{id.charAt(0).toUpperCase() + id.slice(1)}</span>
-              <span className="race-bonus">
-                {id === 'human' && '💰 +20% экономика'}
-                {id === 'elf' && '✨ +50% магия'}
-                {id === 'dwarf' && '🛡️ +50% защита'}
-                {id === 'darkElf' && '⚔️ +40% атака'}
-                {id === 'undead' && '💀 +30% магия'}
-                {id === 'werewolf' && '🐺 +50% атака'}
-                {id === 'orc' && '💪 +40% атака'}
-                {id === 'mage' && '🔮 +100% магия'}
-                {id === 'vampire' && '🧛 +30% атака'}
-                {id === 'dragonborn' && '🐲 +40% экономика'}
-              </span>
-            </div>
-          ))}
+        <div className="race-select-content">
+          <h1>🏰 Выберите расу</h1>
+          <p className="race-subtitle">Каждая раса имеет уникальные бонусы</p>
+          <div className="race-grid">
+            {Object.entries(RACE_EMOJIS).map(([id, emoji]) => (
+              <div key={id} className="race-card" onClick={() => selectRace(id as RaceId)}>
+                <span className="race-emoji">{emoji}</span>
+                <span className="race-name">{id.charAt(0).toUpperCase() + id.slice(1)}</span>
+              </div>
+            ))}
+          </div>
         </div>
         <Styles />
       </div>
     );
   }
 
-  // Загрузка
-  if (loading || !connected || !currentPlayer || !currentMap) {
+  if (loading || !player || !currentMap) {
     return (
       <div className="fortress-page loading">
-        <Castle className="w-16 h-16 animate-pulse" style={{ color: RACE_COLORS[race] || '#4a90d9' }} />
-        <p>Подключение к серверу...</p>
-        {error && <p className="error">{error}</p>}
+        <div className="loading-content">
+          <Castle className="w-20 h-20 animate-pulse" style={{ color: RACE_COLORS[race] || '#4a90d9' }} />
+          <p>Загрузка мира...</p>
+        </div>
         <Styles />
       </div>
     );
   }
 
-  const mapTemplate = getMapTemplate(currentPlayer.currentMapId);
-  const myHero = Array.from(currentPlayer.heroes.values())[0];
-
   return (
-    <div className="fortress-page" style={{ background: `linear-gradient(135deg, ${mapTemplate?.bgColor || '#0d1117'} 0%, #161b22 100%)` }}>
+    <div className="fortress-page" style={{ background: mapTemplate.bgColor }}>
+      <ParticleBackground color={mapTemplate.particleColor} />
       <BackgroundMusic />
 
       {/* Шапка */}
       <header className="fortress-header">
         <div className="header-left">
-          <Link href="/"><Button variant="ghost" size="sm"><ArrowLeft size={16} /> Чат</Button></Link>
+          <Link href="/"><Button variant="ghost" size="sm"><ArrowLeft size={16} /></Button></Link>
           <div className="player-info">
             <span className="race-icon">{RACE_EMOJIS[race]}</span>
             <div>
               <h1>{userName}</h1>
               <span>
-                ⚔️ {myHero ? formatNumber(myHero.army.totalPower) : 0} •
-                👣 {myHero?.movementPoints || 0}/{myHero?.maxMovement || 5} •
-                Ход {state?.turn || 1}
+                {hero ? `⚔️ ${formatNumber(hero.armyPower)} • 👣 ${hero.movementPoints}/${hero.maxMovement}` : 'Нет героя'}
               </span>
             </div>
           </div>
         </div>
         <div className="header-right">
-          <div className="map-selector" onClick={() => setShowMapSelect(true)}>
-            <MapIcon size={16} />
-            <span>{mapTemplate?.name || 'Карта'}</span>
-          </div>
-          <Button size="sm" onClick={endTurn} style={{ background: '#22c55e' }}>
-            ⏭️ След. ход
-          </Button>
+          {hero && (
+            <Button size="sm" onClick={nextTurn} className="turn-btn">
+              ⏭️ След. ход
+            </Button>
+          )}
         </div>
       </header>
 
@@ -660,16 +953,14 @@ export default function FortressPage() {
       <div className="resources-bar">
         {[
           { key: 'gold', emoji: '💰' },
-          { key: 'stone', emoji: '🪨' },
           { key: 'wood', emoji: '🪵' },
-          { key: 'iron', emoji: '⚙️' },
+          { key: 'stone', emoji: '🪨' },
           { key: 'food', emoji: '🍖' },
           { key: 'mana', emoji: '🔮' },
-          { key: 'gems', emoji: '💎' },
         ].map(res => (
           <div key={res.key} className="resource-item">
-            <span>{res.emoji}</span>
-            <span>{formatNumber((currentPlayer.resources as any)[res.key] || 0)}</span>
+            <span className="resource-emoji">{res.emoji}</span>
+            <span className="resource-value">{formatNumber((player.resources as any)[res.key] || 0)}</span>
           </div>
         ))}
       </div>
@@ -677,359 +968,173 @@ export default function FortressPage() {
       {/* Ошибки */}
       {error && <div className="error-banner">{error}</div>}
 
-      {/* Контент */}
-      <div className="main-content">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="main-tabs">
-            <TabsTrigger value="map">🗺️ Карта</TabsTrigger>
-            <TabsTrigger value="castle">🏰 Замок</TabsTrigger>
-            <TabsTrigger value="stats">📊 Стата</TabsTrigger>
-            <TabsTrigger value="chat">💬 Чат</TabsTrigger>
-          </TabsList>
-
-          {/* Карта */}
-          <TabsContent value="map">
-            <div className="map-container">
-              {/* Панель инструментов */}
-              <div className="map-toolbar">
-                <Button variant="outline" size="sm" onClick={() => setZoom(z => Math.min(2, z + 0.2))}>
-                  <ZoomIn size={16} />
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setZoom(z => Math.max(0.5, z - 0.2))}>
-                  <ZoomOut size={16} />
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => { setZoom(1); setOffset({ x: 0, y: 0 }); }}>
-                  <RefreshCw size={16} />
-                </Button>
-              </div>
-
-              {/* SVG карта */}
-              <div
-                className="map-viewport"
-                onMouseDown={e => { setIsDragging(true); setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y }); }}
-                onMouseMove={e => { if (isDragging) setOffset({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y }); }}
-                onMouseUp={() => setIsDragging(false)}
-                onMouseLeave={() => setIsDragging(false)}
-              >
-                <svg
-                  width="100%"
-                  height="100%"
-                  style={{
-                    transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
-                    transformOrigin: 'center',
-                    cursor: isDragging ? 'grabbing' : 'grab',
-                  }}
-                >
-                  {/* Связи между узлами */}
-                  {Array.from(currentMap.nodes.values()).map(node => (
-                    node.connections.map(connId => {
-                      const connNode = currentMap.nodes.get(connId);
-                      if (!connNode || node.id >= connId) return null;
-                      return (
-                        <line
-                          key={`${node.id}-${connId}`}
-                          x1={node.x}
-                          y1={node.y}
-                          x2={connNode.x}
-                          y2={connNode.y}
-                          stroke="#444"
-                          strokeWidth={1}
-                          opacity={0.5}
-                        />
-                      );
-                    })
-                  ))}
-
-                  {/* Узлы карты */}
-                  {Array.from(currentMap.nodes.values()).map(node => {
-                    const isMyNode = node.ownerId === room?.sessionId;
-                    const isEnemyNode = !!node.ownerId && !isMyNode;
-
-                    // Найти игрока на этом узле
-                    let playerHere: { name: string; color: string; emoji: string } | undefined;
-                    state?.players.forEach(p => {
-                      p.heroes.forEach(h => {
-                        if (h.currentNodeId === node.id) {
-                          playerHere = { name: p.name, color: p.color, emoji: RACE_EMOJIS[p.race] };
-                        }
-                      });
-                    });
-
-                    return (
-                      <MapNodeComponent
-                        key={node.id}
-                        node={node}
-                        isSelected={selectedNode?.id === node.id}
-                        isMyNode={isMyNode}
-                        isEnemyNode={isEnemyNode}
-                        myColor={currentPlayer.color}
-                        playerHere={playerHere}
-                        onClick={() => setSelectedNode(node)}
-                      />
-                    );
-                  })}
-
-                  {/* Телепорты и обелиски */}
-                  {Array.from(currentMap.teleports.values()).map(teleport => (
-                    <TeleportComponent
-                      key={teleport.id}
-                      teleport={teleport}
-                      isSelected={selectedTeleport?.id === teleport.id}
-                      onClick={() => setSelectedTeleport(teleport)}
-                    />
-                  ))}
-                </svg>
-              </div>
-
-              {/* Мини-карта */}
-              <div className="minimap">
-                <div className="minimap-header">
-                  <span>{mapTemplate?.name}</span>
-                  <span>{currentMap.currentPlayerCount}/{currentMap.maxPlayers}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Панель выбранного узла */}
-            {selectedNode && (
-              <div className="selection-panel">
-                <div className="panel-header">
-                  <h3>{NODE_CONFIG[selectedNode.type]?.emoji} {selectedNode.name}</h3>
-                  <button onClick={() => setSelectedNode(null)}><X size={16} /></button>
-                </div>
-                <div className="panel-content">
-                  {selectedNode.monsterPower > 0 && (
-                    <p>🐉 Монстры: ⚔️{selectedNode.monsterPower}</p>
-                  )}
-                  {selectedNode.garrison > 0 && (
-                    <p>🛡️ Гарнизон: {selectedNode.garrison}</p>
-                  )}
-                  {selectedNode.ownerName && (
-                    <p>👑 Владелец: {selectedNode.ownerName}</p>
-                  )}
-                  {selectedNode.goldReward > 0 && (
-                    <p>💰 Награда: {selectedNode.goldReward}</p>
-                  )}
-                </div>
-                <div className="panel-actions">
-                  {myHero?.currentNodeId && selectedNode.connections.includes(myHero.currentNodeId) && (
-                    <>
-                      {selectedNode.monsterPower > 0 && (
-                        <Button size="sm" style={{ background: '#dc2626' }} onClick={() => attackNode(selectedNode.id)}>
-                          ⚔️ Атаковать
-                        </Button>
-                      )}
-                      {selectedNode.ownerId && selectedNode.ownerId !== room?.sessionId && (
-                        <Button size="sm" style={{ background: '#dc2626' }} onClick={() => attackNode(selectedNode.id)}>
-                          ⚔️ Атаковать (PvP)
-                        </Button>
-                      )}
-                      {!selectedNode.ownerId && !selectedNode.monsterPower && (
-                        <Button size="sm" style={{ background: '#22c55e' }} onClick={() => captureNode(selectedNode.id)}>
-                          🏴 Захватить
-                        </Button>
-                      )}
-                      {!selectedNode.ownerId && !selectedNode.monsterPower && myHero.movementPoints > 0 && (
-                        <Button size="sm" onClick={() => moveHero(selectedNode.id)}>
-                          🚶 Переместиться
-                        </Button>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Панель телепорта */}
-            {selectedTeleport && (
-              <div className="selection-panel">
-                <div className="panel-header">
-                  <h3>{selectedTeleport.type === 'obelisk' ? '🗼' : '🌀'} {selectedTeleport.name}</h3>
-                  <button onClick={() => setSelectedTeleport(null)}><X size={16} /></button>
-                </div>
-                <div className="panel-content">
-                  <p>💰 Стоимость: {selectedTeleport.cost}</p>
-                  {selectedTeleport.type === 'obelisk' && (
-                    <p>🗼 Переход на другую карту</p>
-                  )}
-                </div>
-                <div className="panel-actions">
-                  {selectedTeleport.type === 'teleport' && (
-                    <Button size="sm" style={{ background: '#06b6d4' }} onClick={() => teleportHero(selectedTeleport.id)}>
-                      🌀 Телепортироваться
-                    </Button>
-                  )}
-                  {selectedTeleport.type === 'obelisk' && (
-                    <Button size="sm" style={{ background: '#8b5cf6' }} onClick={() => setShowMapSelect(true)}>
-                      🗺️ Выбрать карту
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
-          </TabsContent>
-
-          {/* Замок */}
-          <TabsContent value="castle">
-            <div className="castle-content">
-              <h2>🏰 Ваш замок</h2>
-              <div className="hero-info">
-                <h3>⚔️ {myHero?.name || 'Герой'}</h3>
-                <p>Уровень: {myHero?.level || 1}</p>
-                <p>Опыт: {myHero?.experience || 0}</p>
-                <p>⚔️ Сила армии: {myHero ? formatNumber(myHero.army.totalPower) : 0}</p>
-                <p>🗡️ Воины: {myHero?.army.warriors || 0} | 🏹 Лучники: {myHero?.army.archers || 0}</p>
-                <p>🐎 Кавалерия: {myHero?.army.cavalry || 0} | 🧙 Маги: {myHero?.army.mages || 0}</p>
-              </div>
-
-              <h3 style={{ marginTop: 20 }}>🏗️ Наем войск</h3>
-              <div className="recruit-grid">
-                <div className="recruit-card" onClick={() => recruit('warriors', 5)}>
-                  <span className="recruit-icon">🗡️</span>
-                  <span>Воины x5</span>
-                  <span className="recruit-cost">250💰 100🍖</span>
-                </div>
-                <div className="recruit-card" onClick={() => recruit('archers', 5)}>
-                  <span className="recruit-icon">🏹</span>
-                  <span>Лучники x5</span>
-                  <span className="recruit-cost">375💰 150🪵</span>
-                </div>
-                <div className="recruit-card" onClick={() => recruit('cavalry', 3)}>
-                  <span className="recruit-icon">🐎</span>
-                  <span>Кавалерия x3</span>
-                  <span className="recruit-cost">450💰 150🍖</span>
-                </div>
-                <div className="recruit-card" onClick={() => recruit('mages', 2)}>
-                  <span className="recruit-icon">🧙</span>
-                  <span>Маги x2</span>
-                  <span className="recruit-cost">400💰 60🔮</span>
-                </div>
-              </div>
-
-              <h3 style={{ marginTop: 20 }}>🏗️ Постройки</h3>
-              <div className="building-list">
-                {[
-                  { id: 'barracks', name: 'Казарма', icon: '⚔️', cost: '200💰 100🪨' },
-                  { id: 'archery', name: 'Стрельбище', icon: '🏹', cost: '250💰 150🪵' },
-                  { id: 'stable', name: 'Конюшня', icon: '🐎', cost: '400💰 200🪵' },
-                  { id: 'mage_tower', name: 'Башня магов', icon: '🔮', cost: '500💰 300🪨' },
-                ].map(b => (
-                  <div key={b.id} className="building-card" onClick={() => build(b.id)}>
-                    <span className="building-icon">{b.icon}</span>
-                    <span>{b.name}</span>
-                    <span className="building-cost">{b.cost}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* Статистика */}
-          <TabsContent value="stats">
-            <div className="stats-content">
-              <div className="stat-card main-stat">
-                <h3>🏰 Fortress</h3>
-                <div className="stat-grid">
-                  <div><Trophy size={20} /> <span>Очки: {formatNumber(currentPlayer.stats.fortress.score)}</span></div>
-                  <div><Star size={20} /> <span>Победы: {currentPlayer.stats.fortress.wins}</span></div>
-                  <div><Skull size={20} /> <span>Поражения: {currentPlayer.stats.fortress.losses}</span></div>
-                  <div><Cog size={20} /> <span>Игр: {currentPlayer.stats.fortress.totalGames}</span></div>
-                  <div><Zap size={20} /> <span>Время: {Math.floor((currentPlayer.stats.fortress.playTime || 0) / 60)}ч</span></div>
-                </div>
-              </div>
-
-              <div className="stat-row">
-                <div className="stat-card">
-                  <h3>🔫 Mafia</h3>
-                  <p>Победы: {currentPlayer.stats.mafia.wins}</p>
-                  <p>Поражения: {currentPlayer.stats.mafia.losses}</p>
-                </div>
-                <div className="stat-card">
-                  <h3>⚔️ Duel</h3>
-                  <p>Победы: {currentPlayer.stats.duel.wins}</p>
-                  <p>Поражения: {currentPlayer.stats.duel.losses}</p>
-                </div>
-              </div>
-
-              <div className="stat-row">
-                <div className="stat-card">
-                  <h3>🔗 Chain</h3>
-                  <p>Очки: {currentPlayer.stats.chain.score}</p>
-                  <p>Игр: {currentPlayer.stats.chain.totalGames}</p>
-                </div>
-                <div className="stat-card">
-                  <h3>🃏 Poker</h3>
-                  <p>Очки: {currentPlayer.stats.poker.score}</p>
-                  <p>Игр: {currentPlayer.stats.poker.totalGames}</p>
-                </div>
-              </div>
-
-              <div className="stat-card total-stat">
-                <h3>📊 Общий счёт</h3>
-                <p className="total-score">{formatNumber(currentPlayer.score)}</p>
-                <p>Битв выиграно: {currentPlayer.battlesWon}</p>
-                <p>Битв проиграно: {currentPlayer.battlesLost}</p>
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* Чат */}
-          <TabsContent value="chat">
-            <div className="chat-content">
-              <div className="chat-messages">
-                {chatMessages.map((msg, i) => (
-                  <div key={i} className="chat-message">{msg}</div>
-                ))}
-              </div>
-              <div className="chat-input-container">
-                <input
-                  type="text"
-                  value={chatInput}
-                  onChange={e => setChatInput(e.target.value)}
-                  onKeyPress={e => e.key === 'Enter' && sendChat()}
-                  placeholder="Сообщение..."
-                  className="chat-input"
-                />
-                <Button size="sm" onClick={sendChat}>📤</Button>
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
-
-      {/* Модальное окно выбора карты */}
-      {showMapSelect && (
-        <div className="modal-overlay" onClick={() => setShowMapSelect(false)}>
-          <div className="modal-content map-select-modal" onClick={e => e.stopPropagation()}>
-            <h2>🗺️ Выберите карту</h2>
-            <div className="maps-grid">
-              {FANTASY_MAPS.map(map => {
-                const gameMap = state?.maps.get(map.id);
-                const playerCount = gameMap?.currentPlayerCount || 0;
-                const isFull = playerCount >= 50;
-                const isCurrentMap = currentPlayer.currentMapId === map.id;
-
-                return (
-                  <div
-                    key={map.id}
-                    className={`map-card ${isFull ? 'full' : ''} ${isCurrentMap ? 'current' : ''}`}
-                    style={{ background: map.bgColor }}
-                    onClick={() => !isFull && !isCurrentMap && changeMap(map.id)}
-                  >
-                    <div className="map-name">{map.name}</div>
-                    <div className="map-desc">{map.description}</div>
-                    <div className="map-players">
-                      👥 {playerCount}/50 {isFull && '🔒'}
-                    </div>
-                    {isCurrentMap && <Badge>Текущая</Badge>}
-                  </div>
-                );
-              })}
-            </div>
-            <Button variant="outline" onClick={() => setShowMapSelect(false)}>Закрыть</Button>
+      {/* Нет героя - призыв */}
+      {!hero && (
+        <div className="no-hero-message">
+          <div className="message-content">
+            <h2>🗡️ У вас пока нет героя</h2>
+            <p>Найдите таверну на карте и призовите героя!</p>
+            <Button onClick={() => setShowTavern(true)} className="tavern-btn">
+              🍺 Открыть таверну
+            </Button>
           </div>
         </div>
       )}
+
+      {/* Карта */}
+      <div className="map-container">
+        <div className="map-toolbar">
+          <Button variant="outline" size="sm" onClick={() => setZoom(z => Math.min(2, z + 0.2))}>
+            <ZoomIn size={16} />
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setZoom(z => Math.max(0.5, z - 0.2))}>
+            <ZoomOut size={16} />
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => { setZoom(1); setOffset({ x: 0, y: 0 }); }}>
+            <RefreshCw size={16} />
+          </Button>
+        </div>
+
+        <div
+          className="map-viewport"
+          onMouseDown={e => { setIsDragging(true); setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y }); }}
+          onMouseMove={e => { if (isDragging) setOffset({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y }); }}
+          onMouseUp={() => setIsDragging(false)}
+          onMouseLeave={() => setIsDragging(false)}
+        >
+          <svg
+            width="100%"
+            height="100%"
+            style={{
+              transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+              cursor: isDragging ? 'grabbing' : 'grab',
+            }}
+          >
+            {/* Связи */}
+            {Array.from(currentMap.nodes.values()).map(node => (
+              node.connections.map(connId => {
+                const connNode = currentMap.nodes.get(connId);
+                if (!connNode || node.id >= connId) return null;
+                return (
+                  <line
+                    key={`${node.id}-${connId}`}
+                    x1={node.x}
+                    y1={node.y}
+                    x2={connNode.x}
+                    y2={connNode.y}
+                    stroke="rgba(255,255,255,0.1)"
+                    strokeWidth={2}
+                  />
+                );
+              })
+            ))}
+
+            {/* Узлы */}
+            {Array.from(currentMap.nodes.values()).map(node => {
+              const isMyNode = node.ownerId === userId;
+              const isEnemyNode = !!node.ownerId && !isMyNode;
+              const hasHeroHere = heroLocation === node.id;
+              
+              return (
+                <MapNodeComponent
+                  key={node.id}
+                  node={node}
+                  isSelected={selectedNode?.id === node.id}
+                  isMyNode={isMyNode}
+                  isEnemyNode={isEnemyNode}
+                  myColor={player.color}
+                  hasHero={hasHeroHere}
+                  onClick={() => setSelectedNode(node)}
+                />
+              );
+            })}
+          </svg>
+        </div>
+      </div>
+
+      {/* Панель выбранного узла */}
+      {selectedNode && (
+        <div className="selection-panel">
+          <div className="panel-header">
+            <h3>{NODE_STYLES[selectedNode.type]?.emoji} {NODE_STYLES[selectedNode.type]?.name}</h3>
+            <button onClick={() => setSelectedNode(null)}><X size={16} /></button>
+          </div>
+          <p className="panel-description">{NODE_STYLES[selectedNode.type]?.description}</p>
+          
+          {selectedNode.monsterPower > 0 && (
+            <div className="monster-info">
+              <span className="monster-badge">⚔️ {selectedNode.monsterType}</span>
+              <span className="monster-power">Сила: {selectedNode.monsterPower}</span>
+              <span className="monster-reward">Награда: 💰 {selectedNode.goldReward}</span>
+            </div>
+          )}
+          
+          <div className="panel-actions">
+            {/* Таверна */}
+            {selectedNode.type === 'tavern' && !hero && (
+              <Button onClick={() => setShowTavern(true)} className="action-btn tavern-action">
+                🍺 Войти в таверну
+              </Button>
+            )}
+            
+            {/* Движение */}
+            {hero && hero.movementPoints > 0 && heroLocation !== selectedNode.id && (
+              <Button onClick={() => moveHero(selectedNode.id)} className="action-btn move-action">
+                🚶 Переместиться
+              </Button>
+            )}
+            
+            {/* Атака монстра */}
+            {hero && selectedNode.monsterPower > 0 && heroLocation === selectedNode.id && (
+              <Button onClick={() => attackNode(selectedNode)} className="action-btn attack-action">
+                ⚔️ Атаковать!
+              </Button>
+            )}
+            
+            {/* Захват */}
+            {hero && !selectedNode.ownerId && !selectedNode.monsterPower && heroLocation === selectedNode.id && (
+              <Button onClick={() => captureNode(selectedNode)} className="action-btn capture-action">
+                🏴 Захватить
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Информация о герое */}
+      {hero && (
+        <div className="hero-panel">
+          <div className="hero-avatar">{hero.emoji}</div>
+          <div className="hero-info">
+            <span className="hero-name">{hero.name}</span>
+            <div className="hero-bars">
+              <div className="bar hp-bar">
+                <div className="bar-fill" style={{ width: `${(hero.hp / hero.maxHp) * 100}%` }}></div>
+                <span>❤️ {hero.hp}/{hero.maxHp}</span>
+              </div>
+            </div>
+            <div className="hero-stats-mini">
+              <span>⚔️ {hero.attack}</span>
+              <span>🛡️ {hero.defense}</span>
+              <span>👣 {hero.movementPoints}/{hero.maxMovement}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальные окна */}
+      <TavernModal 
+        isOpen={showTavern} 
+        onClose={() => setShowTavern(false)} 
+        onSummon={summonHero}
+        summonedHero={summonedHero}
+      />
+      
+      <BattleModal
+        isOpen={!!battleResult}
+        onClose={() => setBattleResult(null)}
+        result={battleResult}
+      />
 
       <Styles />
     </div>
@@ -1046,27 +1151,50 @@ function Styles() {
       .fortress-page {
         min-height: 100vh;
         color: #ffffff;
+        position: relative;
+        overflow: hidden;
       }
 
+      .particle-canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      /* Loading & Race Select */
       .fortress-page.loading, .fortress-page.race-select {
         display: flex;
-        flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 16px;
-        background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+        background: linear-gradient(135deg, #0a1f0a 0%, #0d1117 100%);
+      }
+
+      .loading-content, .race-select-content {
+        text-align: center;
       }
 
       .race-select h1 {
-        font-size: 32px;
-        margin-bottom: 20px;
+        font-size: 42px;
+        margin-bottom: 8px;
+        background: linear-gradient(to right, #fbbf24, #f59e0b);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .race-subtitle {
+        color: #888;
+        margin-bottom: 32px;
       }
 
       .race-grid {
         display: grid;
         grid-template-columns: repeat(5, 1fr);
         gap: 16px;
-        max-width: 800px;
+        max-width: 700px;
       }
 
       .race-card {
@@ -1074,14 +1202,14 @@ function Styles() {
         border: 2px solid rgba(255, 255, 255, 0.1);
         border-radius: 16px;
         padding: 20px;
-        text-align: center;
         cursor: pointer;
-        transition: all 0.3s;
+        transition: all 0.3s ease;
       }
 
       .race-card:hover {
         transform: translateY(-5px);
-        border-color: #4a90d9;
+        border-color: #fbbf24;
+        box-shadow: 0 10px 30px rgba(251, 191, 36, 0.2);
       }
 
       .race-emoji {
@@ -1091,24 +1219,19 @@ function Styles() {
       }
 
       .race-name {
-        font-size: 14px;
-        display: block;
+        font-size: 12px;
         text-transform: capitalize;
-      }
-
-      .race-bonus {
-        font-size: 10px;
-        color: #888;
-        margin-top: 4px;
-        display: block;
+        color: #ccc;
       }
 
       /* Header */
       .fortress-header {
-        background: rgba(0, 0, 0, 0.5);
+        position: relative;
+        z-index: 10;
+        background: rgba(0, 0, 0, 0.6);
         backdrop-filter: blur(10px);
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 10px 16px;
+        padding: 12px 16px;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -1123,11 +1246,11 @@ function Styles() {
       .player-info {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
       }
 
       .race-icon {
-        font-size: 28px;
+        font-size: 32px;
       }
 
       .player-info h1 {
@@ -1137,84 +1260,106 @@ function Styles() {
 
       .player-info span {
         font-size: 11px;
-        opacity: 0.7;
+        color: #888;
       }
 
-      .map-selector {
-        background: rgba(255, 255, 255, 0.1);
-        padding: 8px 12px;
-        border-radius: 8px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        transition: all 0.2s;
-      }
-
-      .map-selector:hover {
-        background: rgba(255, 255, 255, 0.2);
+      .turn-btn {
+        background: linear-gradient(to right, #22c55e, #16a34a) !important;
+        border: none !important;
+        font-weight: 600;
       }
 
       /* Resources */
       .resources-bar {
-        background: rgba(0, 0, 0, 0.4);
-        padding: 8px 16px;
+        position: relative;
+        z-index: 10;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 10px 16px;
         display: flex;
         justify-content: center;
-        gap: 16px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        gap: 24px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
       }
 
       .resource-item {
         display: flex;
         align-items: center;
         gap: 6px;
-        font-size: 13px;
-        font-weight: 600;
       }
 
-      /* Error banner */
+      .resource-emoji {
+        font-size: 18px;
+      }
+
+      .resource-value {
+        font-size: 14px;
+        font-weight: 600;
+        color: #fbbf24;
+      }
+
+      /* Error */
       .error-banner {
+        position: relative;
+        z-index: 10;
         background: #dc2626;
         color: white;
         padding: 8px 16px;
         text-align: center;
-        font-size: 14px;
       }
 
-      /* Main Content */
-      .main-content {
-        height: calc(100vh - 120px);
-        overflow: hidden;
+      /* No Hero Message */
+      .no-hero-message {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 50;
+        text-align: center;
       }
 
-      .main-tabs {
-        background: rgba(255, 255, 255, 0.05);
-        margin: 8px;
-        border-radius: 8px;
+      .no-hero-message .message-content {
+        background: rgba(0, 0, 0, 0.9);
+        border: 2px solid #fbbf24;
+        border-radius: 20px;
+        padding: 40px;
+        animation: pulse-glow 2s infinite;
       }
 
-      .main-tabs button {
-        color: rgba(255, 255, 255, 0.6);
+      @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.3); }
+        50% { box-shadow: 0 0 40px rgba(251, 191, 36, 0.6); }
       }
 
-      .main-tabs button[data-state="active"] {
-        background: rgba(255, 255, 255, 0.1);
-        color: #fff;
+      .no-hero-message h2 {
+        font-size: 24px;
+        margin-bottom: 12px;
+        color: #fbbf24;
       }
 
-      /* Map Container */
+      .no-hero-message p {
+        color: #888;
+        margin-bottom: 20px;
+      }
+
+      .tavern-btn {
+        background: linear-gradient(to right, #f59e0b, #d97706) !important;
+        border: none !important;
+        font-size: 16px !important;
+        padding: 12px 24px !important;
+      }
+
+      /* Map */
       .map-container {
         position: relative;
-        height: calc(100vh - 200px);
-        background: #0a0a0a;
+        z-index: 5;
+        height: calc(100vh - 130px);
         overflow: hidden;
       }
 
       .map-toolbar {
         position: absolute;
-        top: 10px;
-        left: 10px;
+        top: 16px;
+        left: 16px;
         z-index: 10;
         display: flex;
         gap: 8px;
@@ -1223,44 +1368,44 @@ function Styles() {
       .map-viewport {
         width: 100%;
         height: 100%;
-        overflow: hidden;
       }
 
-      .map-viewport svg {
-        width: 100%;
-        height: 100%;
+      /* Node Animations */
+      .node-glow {
+        animation: glow-pulse 2s infinite;
       }
 
-      /* Minimap */
-      .minimap {
-        position: absolute;
-        bottom: 10px;
-        right: 10px;
-        background: rgba(0, 0, 0, 0.8);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 8px;
-        padding: 8px;
-        z-index: 10;
+      @keyframes glow-pulse {
+        0%, 100% { opacity: 0.3; }
+        50% { opacity: 0.6; }
       }
 
-      .minimap-header {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-        font-size: 11px;
+      .node-body {
+        transition: all 0.2s ease;
+      }
+
+      .hero-marker {
+        animation: hero-bounce 1s infinite;
+      }
+
+      @keyframes hero-bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-5px); }
       }
 
       /* Selection Panel */
       .selection-panel {
-        position: absolute;
-        bottom: 10px;
-        left: 10px;
-        background: rgba(0, 0, 0, 0.9);
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.95);
         border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 12px;
-        padding: 16px;
-        min-width: 200px;
+        border-radius: 16px;
+        padding: 20px;
+        min-width: 300px;
         z-index: 20;
+        backdrop-filter: blur(10px);
       }
 
       .panel-header {
@@ -1271,7 +1416,8 @@ function Styles() {
       }
 
       .panel-header h3 {
-        font-size: 16px;
+        font-size: 18px;
+        font-weight: 600;
       }
 
       .panel-header button {
@@ -1281,166 +1427,121 @@ function Styles() {
         cursor: pointer;
       }
 
-      .panel-content p {
-        margin-bottom: 6px;
+      .panel-description {
+        color: #888;
         font-size: 13px;
+        margin-bottom: 12px;
+      }
+
+      .monster-info {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+      }
+
+      .monster-badge {
+        background: #dc2626;
+        padding: 4px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+      }
+
+      .monster-power {
+        color: #f87171;
+        font-size: 12px;
+      }
+
+      .monster-reward {
+        color: #fbbf24;
+        font-size: 12px;
       }
 
       .panel-actions {
         display: flex;
         gap: 8px;
-        margin-top: 12px;
+        flex-wrap: wrap;
       }
 
-      /* Castle & Stats */
-      .castle-content, .stats-content, .chat-content {
-        padding: 20px;
-        overflow-y: auto;
-        height: calc(100vh - 220px);
+      .action-btn {
+        flex: 1;
+        min-width: 120px;
+      }
+
+      .tavern-action { background: linear-gradient(to right, #f59e0b, #d97706) !important; }
+      .move-action { background: linear-gradient(to right, #3b82f6, #2563eb) !important; }
+      .attack-action { background: linear-gradient(to right, #dc2626, #b91c1c) !important; }
+      .capture-action { background: linear-gradient(to right, #22c55e, #16a34a) !important; }
+
+      /* Hero Panel */
+      .hero-panel {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.9);
+        border: 1px solid rgba(251, 191, 36, 0.3);
+        border-radius: 16px;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        z-index: 20;
+      }
+
+      .hero-avatar {
+        font-size: 48px;
+        background: linear-gradient(to bottom right, #fbbf24, #f59e0b);
+        border-radius: 12px;
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
       .hero-info {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
-        padding: 16px;
-        margin-top: 16px;
-      }
-
-      .recruit-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 12px;
-        margin-top: 12px;
-      }
-
-      .recruit-card {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
-        padding: 16px;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.2s;
-      }
-
-      .recruit-card:hover {
-        background: rgba(255, 255, 255, 0.1);
-        transform: translateY(-2px);
-      }
-
-      .recruit-icon {
-        font-size: 24px;
-        display: block;
-        margin-bottom: 8px;
-      }
-
-      .recruit-cost {
-        font-size: 11px;
-        color: #888;
-        display: block;
-        margin-top: 4px;
-      }
-
-      .building-list {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 12px;
-        margin-top: 12px;
-      }
-
-      .building-card {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
-        padding: 16px;
-        text-align: center;
-        cursor: pointer;
-      }
-
-      .building-icon {
-        font-size: 32px;
-        display: block;
-        margin-bottom: 8px;
-      }
-
-      .building-cost {
-        font-size: 10px;
-        color: #888;
-        display: block;
-        margin-top: 4px;
-      }
-
-      .stat-card {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 12px;
-      }
-
-      .stat-card h3 {
-        margin-bottom: 12px;
-      }
-
-      .stat-grid > div {
         display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 8px;
+        flex-direction: column;
+        gap: 6px;
       }
 
-      .stat-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-      }
-
-      .total-stat {
-        text-align: center;
-        margin-top: 20px;
-      }
-
-      .total-score {
-        font-size: 36px;
-        font-weight: bold;
-        color: #ffd700;
-      }
-
-      /* Chat */
-      .chat-messages {
-        height: calc(100% - 60px);
-        overflow-y: auto;
-        background: rgba(0, 0, 0, 0.3);
-        border-radius: 8px;
-        padding: 12px;
-        margin-bottom: 12px;
-      }
-
-      .chat-message {
-        padding: 6px 0;
-        font-size: 13px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      }
-
-      .chat-input-container {
-        display: flex;
-        gap: 8px;
-      }
-
-      .chat-input {
-        flex: 1;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 8px;
-        padding: 8px 12px;
-        color: white;
+      .hero-name {
+        font-weight: 600;
         font-size: 14px;
       }
 
-      .chat-input:focus {
-        outline: none;
-        border-color: #4a90d9;
+      .hero-bars .bar {
+        width: 150px;
+        height: 16px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        overflow: hidden;
+        position: relative;
       }
 
-      /* Modal */
-      .modal-overlay {
+      .bar-fill {
+        height: 100%;
+        background: linear-gradient(to right, #ef4444, #dc2626);
+        transition: width 0.3s ease;
+      }
+
+      .bar span {
+        position: absolute;
+        left: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 10px;
+      }
+
+      .hero-stats-mini {
+        display: flex;
+        gap: 12px;
+        font-size: 11px;
+        color: #888;
+      }
+
+      /* Tavern Modal */
+      .tavern-modal, .battle-modal {
         position: fixed;
         inset: 0;
         background: rgba(0, 0, 0, 0.9);
@@ -1450,70 +1551,172 @@ function Styles() {
         z-index: 100;
       }
 
-      .modal-content {
-        background: #1a1a2e;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+      .tavern-content, .battle-content {
+        background: linear-gradient(to bottom, #1a1a2e, #0f0f1a);
+        border: 2px solid #f59e0b;
+        border-radius: 24px;
+        padding: 32px;
+        max-width: 400px;
+        width: 90%;
+        text-align: center;
+      }
+
+      .tavern-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+      }
+
+      .tavern-header h2 {
+        font-size: 28px;
+        color: #fbbf24;
+      }
+
+      .tavern-header button {
+        background: none;
+        border: none;
+        color: #888;
+        cursor: pointer;
+      }
+
+      .tavern-description {
+        color: #888;
+        margin-bottom: 24px;
+        line-height: 1.6;
+      }
+
+      .summon-btn {
+        background: linear-gradient(to right, #f59e0b, #d97706) !important;
+        border: none !important;
+        padding: 16px 32px !important;
+        font-size: 16px !important;
+        display: flex !important;
+        align-items: center;
+        gap: 12px;
+        margin: 0 auto;
+      }
+
+      .free-badge {
+        background: #22c55e;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      .rolling-hero {
+        padding: 40px;
+      }
+
+      .hero-emoji.large {
+        font-size: 80px;
+        display: block;
+        animation: roll 0.1s infinite;
+      }
+
+      @keyframes roll {
+        0% { transform: rotate(-5deg); }
+        50% { transform: rotate(5deg); }
+        100% { transform: rotate(-5deg); }
+      }
+
+      .rolling-dots span {
+        animation: blink 0.5s infinite;
+      }
+
+      .rolling-dots span:nth-child(2) { animation-delay: 0.1s; }
+      .rolling-dots span:nth-child(3) { animation-delay: 0.2s; }
+
+      @keyframes blink {
+        0%, 100% { opacity: 0.2; }
+        50% { opacity: 1; }
+      }
+
+      .summoned-hero {
+        text-align: center;
+      }
+
+      .hero-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 2px solid #fbbf24;
         border-radius: 16px;
         padding: 24px;
-        max-width: 90vw;
-        max-height: 80vh;
-        overflow-y: auto;
-      }
-
-      .map-select-modal h2 {
         margin-bottom: 20px;
       }
 
-      .maps-grid {
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 12px;
-        margin-bottom: 20px;
+      .hero-card .hero-emoji {
+        font-size: 64px;
+        margin-bottom: 12px;
       }
 
-      .map-card {
-        border-radius: 12px;
-        padding: 16px;
-        cursor: pointer;
-        transition: all 0.3s;
-        border: 2px solid transparent;
+      .hero-card h3 {
+        font-size: 20px;
+        margin-bottom: 4px;
       }
 
-      .map-card:hover:not(.full) {
-        transform: translateY(-3px);
-        border-color: #fff;
+      .hero-class {
+        color: #fbbf24;
+        margin-bottom: 12px;
       }
 
-      .map-card.full {
-        opacity: 0.5;
-        cursor: not-allowed;
+      .hero-stats {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        margin-bottom: 12px;
       }
 
-      .map-card.current {
-        border-color: #22c55e;
-      }
-
-      .map-name {
+      .hero-skill {
+        color: #22c55e;
         font-size: 14px;
-        font-weight: bold;
-        margin-bottom: 6px;
       }
 
-      .map-desc {
-        font-size: 10px;
-        opacity: 0.7;
-        margin-bottom: 8px;
+      .close-btn {
+        background: linear-gradient(to right, #22c55e, #16a34a) !important;
+        border: none !important;
       }
 
-      .map-players {
-        font-size: 11px;
+      /* Battle Modal */
+      .battle-result {
+        padding: 20px;
+      }
+
+      .battle-result.victory .result-icon { font-size: 80px; animation: victory 0.5s ease; }
+      .battle-result.defeat .result-icon { font-size: 80px; animation: defeat 0.5s ease; }
+
+      @keyframes victory {
+        0% { transform: scale(0) rotate(-180deg); }
+        100% { transform: scale(1) rotate(0deg); }
+      }
+
+      @keyframes defeat {
+        0% { transform: translateY(-50px); opacity: 0; }
+        100% { transform: translateY(0); opacity: 1; }
+      }
+
+      .battle-result.victory h2 { color: #22c55e; }
+      .battle-result.defeat h2 { color: #dc2626; }
+
+      .rewards {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        margin: 16px 0;
+      }
+
+      .reward-item {
+        background: rgba(251, 191, 36, 0.2);
+        padding: 8px 16px;
+        border-radius: 8px;
+        color: #fbbf24;
       }
 
       /* Music Button */
       .music-btn {
         position: fixed;
         bottom: 20px;
-        right: 20px;
+        left: 20px;
         width: 44px;
         height: 44px;
         border-radius: 50%;
@@ -1534,24 +1737,21 @@ function Styles() {
         }
 
         .resources-bar {
-          flex-wrap: wrap;
-          gap: 8px;
+          gap: 12px;
         }
 
-        .minimap {
-          display: none;
+        .hero-panel {
+          right: 10px;
+          left: 10px;
+          bottom: 100px;
+          transform: none;
         }
 
-        .maps-grid {
-          grid-template-columns: repeat(2, 1fr);
-        }
-
-        .recruit-grid {
-          grid-template-columns: repeat(2, 1fr);
-        }
-
-        .stat-row {
-          grid-template-columns: 1fr;
+        .selection-panel {
+          left: 10px;
+          right: 10px;
+          transform: none;
+          min-width: auto;
         }
       }
     `}</style>
