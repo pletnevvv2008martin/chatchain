@@ -5,7 +5,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { useRouter } from 'next/navigation';
 import { 
   Gamepad2, Spade, Sun, Moon, Bell, Shield, PenLine, Link2, Users, Heart, 
-  Swords, LogOut, Castle, ChevronDown, ChevronUp, X, Dices, Crown, Target
+  Swords, LogOut, Castle, ChevronDown, ChevronUp, X, Dices, Crown, Target, Crosshair
 } from 'lucide-react';
 
 // Админы по никнейму
@@ -20,6 +20,7 @@ const ALL_GAMES = [
   { id: 'game', name: 'Казино', icon: Dices, color: '#f59e0b', href: '/game', description: 'Испытай удачу' },
   { id: 'poker', name: 'Покер', icon: Spade, color: '#22c55e', href: '/poker', description: 'Техасский холдем' },
   { id: 'fortress', name: 'Крепость', icon: Castle, color: '#06b6d4', href: '/fortress', description: 'Стратегия в реальном времени' },
+  { id: 'surviv', name: 'Surviv.io', icon: Crosshair, color: '#dc2626', href: '/surviv', description: 'Battle Royale для зарегистрированных' },
 ];
 
 interface HeaderProps {
@@ -514,6 +515,9 @@ export default function Header({
         
         .game-icon-btn.fortress { background: rgba(6, 182, 212, 0.2); color: #06b6d4; }
         .game-icon-btn.fortress:hover { background: #06b6d4; color: white; }
+        
+        .game-icon-btn.surviv { background: rgba(220, 38, 38, 0.2); color: #dc2626; }
+        .game-icon-btn.surviv:hover { background: #dc2626; color: white; }
 
         /* Мобильные стили */
         @media (max-width: 768px) {
