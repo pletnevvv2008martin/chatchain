@@ -9,7 +9,7 @@ import {
   Crown, Lock, X, ArrowLeft, RefreshCw, Volume2, VolumeX,
   Crosshair, Flag, Eye, Move, ZoomIn, ZoomOut, Heart, Skull, Chest,
   Sparkles, Flame, Users, Map as MapIcon, Compass, Star, Trophy,
-  Tavern, Dice1, Dice2, Dice3, Dice4, Dice5, Dice6
+  Tavern, Dice1, Wifi, WifiOff
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -48,6 +48,7 @@ interface Hero {
   movementPoints: number;
   maxMovement: number;
   skills: string[];
+  currentNodeId?: string;
 }
 
 interface MapNode {
@@ -104,70 +105,28 @@ const RACE_COLORS: Record<RaceId, string> = {
   vampire: '#dc2626', dragonborn: '#f97316'
 };
 
-// Красивые конфиги для объектов
 const NODE_STYLES: Record<string, {
   emoji: string;
   name: string;
   color: string;
   glowColor: string;
   description: string;
-  icon: string;
 }> = {
-  castle: { 
-    emoji: '🏰', name: 'Замок', color: '#8b5cf6', glowColor: '#a78bfa',
-    description: 'Ваш главный оплот', icon: '👑'
-  },
-  town: { 
-    emoji: '🏘️', name: 'Город', color: '#3b82f6', glowColor: '#60a5fa',
-    description: 'Приносит +20 золота/ход', icon: '🏪'
-  },
-  village: { 
-    emoji: '🏠', name: 'Деревня', color: '#22c55e', glowColor: '#4ade80',
-    description: 'Приносит +15 еды/ход', icon: '🌾'
-  },
-  gold_mine: { 
-    emoji: '💰', name: 'Золотая шахта', color: '#eab308', glowColor: '#fde047',
-    description: 'Приносит +30 золота/ход', icon: '⛏️'
-  },
-  stone_quarry: { 
-    emoji: '🪨', name: 'Каменоломня', color: '#6b7280', glowColor: '#9ca3af',
-    description: 'Приносит +25 камня/ход', icon: '🔨'
-  },
-  lumber_mill: { 
-    emoji: '🪵', name: 'Лесопилка', color: '#92400e', glowColor: '#d97706',
-    description: 'Приносит +20 дерева/ход', icon: '🪓'
-  },
-  iron_mine: { 
-    emoji: '⚙️', name: 'Железный рудник', color: '#475569', glowColor: '#64748b',
-    description: 'Приносит +15 железа/ход', icon: '🔧'
-  },
-  farm: { 
-    emoji: '🌾', name: 'Ферма', color: '#84cc16', glowColor: '#a3e635',
-    description: 'Приносит +25 еды/ход', icon: '🐄'
-  },
-  mana_well: { 
-    emoji: '🔮', name: 'Источник маны', color: '#8b5cf6', glowColor: '#c4b5fd',
-    description: 'Приносит +10 маны/ход', icon: '✨'
-  },
-  monster_lair: { 
-    emoji: '🐉', name: 'Логово монстров', color: '#dc2626', glowColor: '#f87171',
-    description: 'Победите монстров для награды', icon: '⚔️'
-  },
-  teleport: { 
-    emoji: '🌀', name: 'Телепорт', color: '#06b6d4', glowColor: '#22d3ee',
-    description: 'Мгновенное перемещение', icon: '💫'
-  },
-  obelisk: { 
-    emoji: '🗼', name: 'Обелиск', color: '#7c3aed', glowColor: '#a78bfa',
-    description: 'Переход на другую карту', icon: '🌟'
-  },
-  tavern: { 
-    emoji: '🍺', name: 'Таверна', color: '#f59e0b', glowColor: '#fbbf24',
-    description: 'Призовите героя бесплатно!', icon: '🎲'
-  },
+  castle: { emoji: '🏰', name: 'Замок', color: '#8b5cf6', glowColor: '#a78bfa', description: 'Ваш главный оплот' },
+  town: { emoji: '🏘️', name: 'Город', color: '#3b82f6', glowColor: '#60a5fa', description: 'Приносит +20 золота/ход' },
+  village: { emoji: '🏠', name: 'Деревня', color: '#22c55e', glowColor: '#4ade80', description: 'Приносит +15 еды/ход' },
+  gold_mine: { emoji: '💰', name: 'Золотая шахта', color: '#eab308', glowColor: '#fde047', description: 'Приносит +30 золота/ход' },
+  stone_quarry: { emoji: '🪨', name: 'Каменоломня', color: '#6b7280', glowColor: '#9ca3af', description: 'Приносит +25 камня/ход' },
+  lumber_mill: { emoji: '🪵', name: 'Лесопилка', color: '#92400e', glowColor: '#d97706', description: 'Приносит +20 дерева/ход' },
+  iron_mine: { emoji: '⚙️', name: 'Железный рудник', color: '#475569', glowColor: '#64748b', description: 'Приносит +15 железа/ход' },
+  farm: { emoji: '🌾', name: 'Ферма', color: '#84cc16', glowColor: '#a3e635', description: 'Приносит +25 еды/ход' },
+  mana_well: { emoji: '🔮', name: 'Источник маны', color: '#8b5cf6', glowColor: '#c4b5fd', description: 'Приносит +10 маны/ход' },
+  monster_lair: { emoji: '🐉', name: 'Логово монстров', color: '#dc2626', glowColor: '#f87171', description: 'Победите монстров для награды' },
+  teleport: { emoji: '🌀', name: 'Телепорт', color: '#06b6d4', glowColor: '#22d3ee', description: 'Мгновенное перемещение' },
+  obelisk: { emoji: '🗼', name: 'Обелиск', color: '#7c3aed', glowColor: '#a78bfa', description: 'Переход на другую карту' },
+  tavern: { emoji: '🍺', name: 'Таверна', color: '#f59e0b', glowColor: '#fbbf24', description: 'Призовите героя!' },
 };
 
-// Классы героев для таверны
 const HERO_CLASSES = [
   { class: 'warrior', name: 'Воин', emoji: '⚔️', hp: 150, attack: 25, defense: 15, skill: 'Мощный удар' },
   { class: 'mage', name: 'Маг', emoji: '🔮', hp: 80, attack: 35, defense: 5, skill: 'Огненный шар' },
@@ -198,7 +157,6 @@ const GAME_SERVER = process.env.NEXT_PUBLIC_GAME_SERVER || 'ws://179.61.145.218:
 // КОМПОНЕНТЫ
 // ============================================
 
-// Анимированные частицы на фоне
 function ParticleBackground({ color }: { color: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
@@ -256,7 +214,6 @@ function ParticleBackground({ color }: { color: string }) {
   return <canvas ref={canvasRef} className="particle-canvas" />;
 }
 
-// Анимированный узел карты
 function MapNodeComponent({
   node, isSelected, isMyNode, isEnemyNode, myColor, hasHero, onClick
 }: {
@@ -278,7 +235,6 @@ function MapNodeComponent({
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      {/* Внешнее свечение */}
       <circle
         cx={node.x}
         cy={node.y}
@@ -290,7 +246,6 @@ function MapNodeComponent({
         className="node-glow"
       />
       
-      {/* Основной круг */}
       <circle
         cx={node.x}
         cy={node.y}
@@ -301,18 +256,10 @@ function MapNodeComponent({
         className="node-body"
       />
       
-      {/* Иконка объекта */}
-      <text 
-        x={node.x} 
-        y={node.y + 8} 
-        textAnchor="middle" 
-        fontSize={32}
-        className="node-emoji"
-      >
+      <text x={node.x} y={node.y + 8} textAnchor="middle" fontSize={32} className="node-emoji">
         {style.emoji}
       </text>
       
-      {/* Индикатор монстра */}
       {node.monsterPower > 0 && (
         <g>
           <circle cx={node.x + 30} cy={node.y - 30} r={18} fill="#dc2626" opacity={0.9} />
@@ -321,7 +268,6 @@ function MapNodeComponent({
         </g>
       )}
       
-      {/* Индикатор гарнизона */}
       {node.garrison > 0 && (
         <g>
           <circle cx={node.x - 30} cy={node.y - 30} r={16} fill={isMyNode ? '#22c55e' : '#6b7280'} opacity={0.9} />
@@ -329,7 +275,6 @@ function MapNodeComponent({
         </g>
       )}
       
-      {/* Герой на узле */}
       {hasHero && (
         <g className="hero-marker">
           <circle cx={node.x} cy={node.y + 55} r={20} fill="#fbbf24" stroke="#f59e0b" strokeWidth={2} />
@@ -337,39 +282,21 @@ function MapNodeComponent({
         </g>
       )}
       
-      {/* Название при наведении */}
       {(hover || isSelected) && (
         <g>
-          <rect
-            x={node.x - 60}
-            y={node.y - 75}
-            width={120}
-            height={24}
-            rx={8}
-            fill="rgba(0,0,0,0.8)"
-            stroke={style.color}
-          />
-          <text
-            x={node.x}
-            y={node.y - 58}
-            textAnchor="middle"
-            fontSize={12}
-            fill="white"
-            fontWeight="bold"
-          >
+          <rect x={node.x - 60} y={node.y - 75} width={120} height={24} rx={8} fill="rgba(0,0,0,0.8)" stroke={style.color} />
+          <text x={node.x} y={node.y - 58} textAnchor="middle" fontSize={12} fill="white" fontWeight="bold">
             {style.name}
           </text>
         </g>
       )}
       
-      {/* Владелец */}
       {node.ownerName && (
         <text x={node.x} y={node.y + 75} textAnchor="middle" fontSize={10} fill="#888">
           {node.ownerName.slice(0, 12)}
         </text>
       )}
       
-      {/* Градиент для узла */}
       <defs>
         <radialGradient id={`nodeGradient-${node.type}`} cx="50%" cy="30%" r="70%">
           <stop offset="0%" stopColor={style.glowColor} />
@@ -380,7 +307,6 @@ function MapNodeComponent({
   );
 }
 
-// Компонент Таверны
 function TavernModal({
   isOpen, onClose, onSummon, summonedHero
 }: {
@@ -418,8 +344,7 @@ function TavernModal({
         
         <div className="tavern-body">
           <p className="tavern-description">
-            Добро пожаловать, путник! Здесь ты можешь призвать героя себе на службу.
-            Первое посещение — бесплатно!
+            Добро пожаловать, путник! Призовите героя себе на службу!
           </p>
           
           {summonedHero ? (
@@ -442,15 +367,12 @@ function TavernModal({
               {rolling ? (
                 <div className="rolling-hero">
                   <span className="hero-emoji large">{HERO_CLASSES[displayHero].emoji}</span>
-                  <div className="rolling-dots">
-                    <span>.</span><span>.</span><span>.</span>
-                  </div>
+                  <div className="rolling-dots"><span>.</span><span>.</span><span>.</span></div>
                 </div>
               ) : (
                 <Button onClick={handleSummon} className="summon-btn">
                   <Dice1 size={20} />
                   <span>Призвать героя!</span>
-                  <span className="free-badge">БЕСПЛАТНО</span>
                 </Button>
               )}
             </div>
@@ -461,7 +383,6 @@ function TavernModal({
   );
 }
 
-// Компонент боя
 function BattleModal({
   isOpen, onClose, result
 }: {
@@ -475,9 +396,7 @@ function BattleModal({
     <div className="battle-modal" onClick={onClose}>
       <div className="battle-content" onClick={e => e.stopPropagation()}>
         <div className={`battle-result ${result.won ? 'victory' : 'defeat'}`}>
-          <div className="result-icon">
-            {result.won ? '🏆' : '💀'}
-          </div>
+          <div className="result-icon">{result.won ? '🏆' : '💀'}</div>
           <h2>{result.won ? 'ПОБЕДА!' : 'ПОРАЖЕНИЕ'}</h2>
           <p>{result.message}</p>
           {result.won && (
@@ -496,7 +415,6 @@ function BattleModal({
   );
 }
 
-// Музыка
 function BackgroundMusic() {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -546,8 +464,9 @@ export default function FortressPage() {
   const [loading, setLoading] = useState(true);
 
   // Сеть
-  const [room, setRoom] = useState<Room | null>(null);
+  const gameRoom = useRef<Room | null>(null);
   const [connected, setConnected] = useState(false);
+  const [isOnline, setIsOnline] = useState(false);
   const [error, setError] = useState<string>('');
 
   // Игра
@@ -568,8 +487,12 @@ export default function FortressPage() {
   const [summonedHero, setSummonedHero] = useState<Hero | null>(null);
   const [battleResult, setBattleResult] = useState<{ won: boolean; message: string; rewards: Resources } | null>(null);
 
-  // Локальная игра (оффлайн режим) - определяется до использования
+  // ============================================
+  // ИНИЦИАЛИЗАЦИЯ ЛОКАЛЬНОЙ ИГРЫ (FALLBACK)
+  // ============================================
+  
   const initLocalGame = useCallback(() => {
+    console.log('🎮 Инициализация локальной игры...');
     const mapId = 'green_valley';
     const nodes = new Map<string, MapNode>();
     
@@ -644,7 +567,177 @@ export default function FortressPage() {
     setConnected(true);
     setLoading(false);
     setShowRaceSelect(true);
+    console.log('✅ Локальная игра инициализирована');
   }, [userId, userName]);
+
+  // ============================================
+  // ПОДКЛЮЧЕНИЕ К СЕРВЕРУ
+  // ============================================
+  
+  const connectToServer = useCallback(async () => {
+    if (!userId || !userName) return;
+    
+    console.log('🔌 Подключение к серверу:', GAME_SERVER);
+    
+    try {
+      const client = new Client(GAME_SERVER);
+      
+      const room = await client.joinOrCreate('fortress', {
+        name: userName,
+        userId: userId,
+        isRegistered: true,
+        mapId: 'green_valley'
+      });
+      
+      console.log('✅ Подключено к комнате:', room.sessionId);
+      gameRoom.current = room;
+      setConnected(true);
+      setIsOnline(true);
+      setLoading(false);
+      
+      // Обработка сообщений от сервера
+      room.onMessage('state_sync', (data: any) => {
+        console.log('📡 State sync:', data);
+      });
+      
+      room.onMessage('error', (data: any) => {
+        console.error('❌ Server error:', data.message);
+        setError(data.message);
+      });
+      
+      room.onMessage('system_message', (data: any) => {
+        console.log('💬 System:', data.content);
+      });
+      
+      room.onMessage('map_changed', (data: any) => {
+        console.log('🗺️ Map changed:', data.mapId);
+      });
+      
+      // Синхронизация состояния
+      room.onStateChange((state: any) => {
+        console.log('🔄 State changed');
+        
+        // Получаем данные игрока
+        if (state.players && room.sessionId) {
+          const serverPlayer = state.players.get(room.sessionId);
+          if (serverPlayer) {
+            const playerData: Player = {
+              id: serverPlayer.id || userId,
+              name: serverPlayer.name || userName,
+              race: serverPlayer.race || 'human',
+              color: serverPlayer.color || RACE_COLORS.human,
+              resources: serverPlayer.resources ? {
+                gold: serverPlayer.resources.gold || 0,
+                stone: serverPlayer.resources.stone || 0,
+                wood: serverPlayer.resources.wood || 0,
+                iron: serverPlayer.resources.iron || 0,
+                food: serverPlayer.resources.food || 0,
+                mana: serverPlayer.resources.mana || 0,
+                gems: serverPlayer.resources.gems || 0
+              } : { gold: 500, stone: 200, wood: 200, iron: 100, food: 300, mana: 50, gems: 0 },
+              heroes: [],
+              castleNodeId: serverPlayer.castleNodeId || '',
+              score: serverPlayer.score || 0,
+              battlesWon: serverPlayer.battlesWon || 0,
+              battlesLost: serverPlayer.battlesLost || 0,
+              currentMapId: serverPlayer.currentMapId || 'green_valley'
+            };
+            
+            // Получаем героев
+            if (serverPlayer.heroes) {
+              const heroes: Hero[] = [];
+              serverPlayer.heroes.forEach((h: any) => {
+                heroes.push({
+                  id: h.id,
+                  name: h.name,
+                  class: 'Воин',
+                  emoji: '⚔️',
+                  x: h.x,
+                  y: h.y,
+                  level: h.level || 1,
+                  experience: h.experience || 0,
+                  hp: 100,
+                  maxHp: 100,
+                  attack: h.army?.totalPower ? Math.floor(h.army.totalPower / 10) : 20,
+                  defense: 10,
+                  armyPower: h.army?.totalPower || 100,
+                  movementPoints: h.movementPoints || 5,
+                  maxMovement: h.maxMovement || 5,
+                  skills: ['Удар'],
+                  currentNodeId: h.currentNodeId
+                });
+              });
+              playerData.heroes = heroes;
+              if (heroes.length > 0) {
+                setHero(heroes[0]);
+                setHeroLocation(heroes[0].currentNodeId || null);
+              }
+            }
+            
+            setPlayer(playerData);
+            setShowRaceSelect(!serverPlayer.race || serverPlayer.race === 'human');
+          }
+        }
+        
+        // Получаем карту
+        if (state.maps) {
+          const mapId = 'green_valley';
+          const serverMap = state.maps.get(mapId);
+          if (serverMap) {
+            const gameMap: GameMap = {
+              id: mapId,
+              name: serverMap.name || 'Зелёная Долина',
+              theme: serverMap.theme || 'forest',
+              nodes: new Map()
+            };
+            
+            if (serverMap.nodes) {
+              serverMap.nodes.forEach((n: any) => {
+                gameMap.nodes.set(n.id, {
+                  id: n.id,
+                  type: n.type,
+                  name: n.name,
+                  x: n.x,
+                  y: n.y,
+                  ownerId: n.ownerId,
+                  ownerName: n.ownerName,
+                  garrison: n.garrison,
+                  defense: n.defense,
+                  connections: Array.from(n.connections || []),
+                  goldReward: n.goldReward || 0,
+                  monsterPower: n.monsterPower || 0,
+                  monsterType: 'Дракон',
+                  terrain: n.terrain || '🌿',
+                  isTerritory: n.isTerritory || false
+                });
+              });
+            }
+            
+            setCurrentMap(gameMap);
+          }
+        }
+      });
+      
+      room.onLeave(() => {
+        console.log('👋 Disconnected from server');
+        setConnected(false);
+        setIsOnline(false);
+      });
+      
+      room.onError((err: any) => {
+        console.error('❌ Room error:', err);
+        setError('Ошибка соединения с сервером');
+        setIsOnline(false);
+        initLocalGame();
+      });
+      
+    } catch (err: any) {
+      console.error('❌ Connection failed:', err.message);
+      setError('Не удалось подключиться к серверу - оффлайн режим');
+      setIsOnline(false);
+      initLocalGame();
+    }
+  }, [userId, userName, initLocalGame]);
 
   // Загрузка пользователя
   useEffect(() => {
@@ -654,33 +747,33 @@ export default function FortressPage() {
       const user = JSON.parse(storedUser);
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setUserId(user.id);
-       
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUserName(user.nickname);
     } else {
       router.push('/');
     }
   }, [router]);
 
-  // Инициализация игры
+  // Инициализация игры - сначала пробуем сервер
   useEffect(() => {
     if (!userId || !userName) return;
-    
-    // Сразу запускаем локальную игру (оффлайн режим)
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    initLocalGame();
-  }, [userId, userName, initLocalGame]);
+    connectToServer();
+  }, [userId, userName, connectToServer]);
 
-  // Выбор расы
+  // ============================================
+  // ИГРОВЫЕ ДЕЙСТВИЯ
+  // ============================================
+
   const selectRace = (raceId: RaceId) => {
     setRace(raceId);
     localStorage.setItem('chatchain_fortress_race', raceId);
     setShowRaceSelect(false);
-    if (room) {
-      room.send('select_race', raceId);
+    if (gameRoom.current) {
+      gameRoom.current.send('select_race', raceId);
     }
   };
 
-  // Призыв героя
   const summonHero = () => {
     const heroClass = HERO_CLASSES[Math.floor(Math.random() * HERO_CLASSES.length)];
     const newHero: Hero = {
@@ -705,37 +798,34 @@ export default function FortressPage() {
     setSummonedHero(newHero);
     setHero(newHero);
     
-    if (room) {
-      room.send('summon_hero', { heroClass: heroClass.class });
+    if (gameRoom.current) {
+      gameRoom.current.send('summon_hero', { heroClass: heroClass.class });
     }
     
-    // Ставим героя в замок
     if (player && currentMap) {
       const castle = Array.from(currentMap.nodes.values()).find(n => n.type === 'castle' && n.ownerId === userId);
       if (castle) {
         setHeroLocation(castle.id);
+        newHero.currentNodeId = castle.id;
       }
     }
   };
 
-  // Движение героя
   const moveHero = (targetNodeId: string) => {
     if (!hero || hero.movementPoints <= 0) return;
     
     setHeroLocation(targetNodeId);
-    setHero(prev => prev ? { ...prev, movementPoints: prev.movementPoints - 1 } : null);
+    setHero(prev => prev ? { ...prev, movementPoints: prev.movementPoints - 1, currentNodeId: targetNodeId } : null);
     
-    if (room) {
-      room.send('move_hero', { heroId: hero.id, targetNodeId });
+    if (gameRoom.current && hero) {
+      gameRoom.current.send('move_hero', { heroId: hero.id, targetNodeId });
     }
   };
 
-  // Атака
   const attackNode = (node: MapNode) => {
     if (!hero) return;
     
     if (node.monsterPower > 0) {
-      // Бой с монстром
       const heroPower = hero.attack + hero.armyPower * 0.5;
       const won = heroPower > node.monsterPower * (0.5 + Math.random() * 0.5);
       
@@ -753,7 +843,6 @@ export default function FortressPage() {
           rewards: { gold: node.goldReward, food: 50, iron: 0, stone: 0, wood: 0, mana: 0, gems: 0 }
         });
         
-        // Обновляем карту
         if (currentMap) {
           const updatedNode = currentMap.nodes.get(node.id);
           if (updatedNode) {
@@ -762,23 +851,22 @@ export default function FortressPage() {
           }
         }
       } else {
-        setHero(prev => prev ? { 
-          ...prev, 
-          hp: Math.max(1, prev.hp - 50)
-        } : null);
-        
+        setHero(prev => prev ? { ...prev, hp: Math.max(1, prev.hp - 50) } : null);
         setBattleResult({
           won: false,
           message: `${node.monsterType} оказался сильнее!`,
           rewards: { gold: 0, food: 0, iron: 0, stone: 0, wood: 0, mana: 0, gems: 0 }
         });
       }
+      
+      if (gameRoom.current) {
+        gameRoom.current.send('attack_node', { heroId: hero.id, targetNodeId: node.id });
+      }
     }
     
     setSelectedNode(null);
   };
 
-  // Захват узла
   const captureNode = (node: MapNode) => {
     if (!hero || heroLocation !== node.id) return;
     
@@ -791,16 +879,18 @@ export default function FortressPage() {
       }
     }
     
+    if (gameRoom.current) {
+      gameRoom.current.send('capture_node', { heroId: hero.id, targetNodeId: node.id });
+    }
+    
     setSelectedNode(null);
   };
 
-  // Следующий ход
   const nextTurn = () => {
     if (hero) {
       setHero(prev => prev ? { ...prev, movementPoints: prev.maxMovement } : null);
     }
     
-    // Начисляем ресурсы
     if (player && currentMap) {
       let goldBonus = 50;
       let foodBonus = 20;
@@ -822,6 +912,10 @@ export default function FortressPage() {
         }
       } : null);
     }
+    
+    if (gameRoom.current) {
+      gameRoom.current.send('end_turn');
+    }
   };
 
   const formatNumber = (num: number): string => {
@@ -832,7 +926,10 @@ export default function FortressPage() {
 
   const mapTemplate = FANTASY_MAPS.find(m => m.id === player?.currentMapId) || FANTASY_MAPS[0];
 
-  // Рендер
+  // ============================================
+  // РЕНДЕР
+  // ============================================
+
   if (showRaceSelect) {
     return (
       <div className="fortress-page race-select">
@@ -859,6 +956,7 @@ export default function FortressPage() {
         <div className="loading-content">
           <Castle className="w-20 h-20 animate-pulse" style={{ color: RACE_COLORS[race] || '#4a90d9' }} />
           <p>Загрузка мира...</p>
+          <p className="loading-status">{isOnline ? '🌐 Подключение к серверу...' : '🎮 Оффлайн режим'}</p>
         </div>
         <Styles />
       </div>
@@ -879,7 +977,8 @@ export default function FortressPage() {
             <div>
               <h1>{userName}</h1>
               <span>
-                {hero ? `⚔️ ${formatNumber(hero.armyPower)} • 👣 ${hero.movementPoints}/${hero.maxMovement}` : 'Нет героя'}
+                {isOnline ? <Wifi size={12} className="online-icon" /> : <WifiOff size={12} className="offline-icon" />}
+                {hero ? ` ⚔️ ${formatNumber(hero.armyPower)} • 👣 ${hero.movementPoints}/${hero.maxMovement}` : ' Нет героя'}
               </span>
             </div>
           </div>
@@ -912,7 +1011,7 @@ export default function FortressPage() {
       {/* Ошибки */}
       {error && <div className="error-banner">{error}</div>}
 
-      {/* Нет героя - призыв */}
+      {/* Нет героя */}
       {!hero && (
         <div className="no-hero-message">
           <div className="message-content">
@@ -1014,28 +1113,24 @@ export default function FortressPage() {
           )}
           
           <div className="panel-actions">
-            {/* Таверна */}
             {selectedNode.type === 'tavern' && !hero && (
               <Button onClick={() => setShowTavern(true)} className="action-btn tavern-action">
                 🍺 Войти в таверну
               </Button>
             )}
             
-            {/* Движение */}
             {hero && hero.movementPoints > 0 && heroLocation !== selectedNode.id && (
               <Button onClick={() => moveHero(selectedNode.id)} className="action-btn move-action">
                 🚶 Переместиться
               </Button>
             )}
             
-            {/* Атака монстра */}
             {hero && selectedNode.monsterPower > 0 && heroLocation === selectedNode.id && (
               <Button onClick={() => attackNode(selectedNode)} className="action-btn attack-action">
                 ⚔️ Атаковать!
               </Button>
             )}
             
-            {/* Захват */}
             {hero && !selectedNode.ownerId && !selectedNode.monsterPower && heroLocation === selectedNode.id && (
               <Button onClick={() => captureNode(selectedNode)} className="action-btn capture-action">
                 🏴 Захватить
@@ -1109,7 +1204,6 @@ function Styles() {
         z-index: 0;
       }
 
-      /* Loading & Race Select */
       .fortress-page.loading, .fortress-page.race-select {
         display: flex;
         align-items: center;
@@ -1120,6 +1214,15 @@ function Styles() {
       .loading-content, .race-select-content {
         text-align: center;
       }
+
+      .loading-status {
+        font-size: 12px;
+        color: #888;
+        margin-top: 8px;
+      }
+
+      .online-icon { color: #22c55e; margin-right: 4px; }
+      .offline-icon { color: #f97316; margin-right: 4px; }
 
       .race-select h1 {
         font-size: 42px;
@@ -1168,17 +1271,20 @@ function Styles() {
         color: #ccc;
       }
 
-      /* Header */
       .fortress-header {
-        position: relative;
-        z-index: 10;
-        background: rgba(0, 0, 0, 0.6);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: rgba(0, 0, 0, 0.8);
         backdrop-filter: blur(10px);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 12px 16px;
         display: flex;
-        justify-content: space-between;
         align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        z-index: 100;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       }
 
       .header-left, .header-right {
@@ -1190,38 +1296,37 @@ function Styles() {
       .player-info {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
       }
 
       .race-icon {
-        font-size: 32px;
+        font-size: 28px;
       }
 
       .player-info h1 {
-        font-size: 14px;
-        font-weight: 700;
+        font-size: 16px;
+        margin: 0;
       }
 
       .player-info span {
-        font-size: 11px;
+        font-size: 12px;
         color: #888;
-      }
-
-      .turn-btn {
-        background: linear-gradient(to right, #22c55e, #16a34a) !important;
-        border: none !important;
-        font-weight: 600;
-      }
-
-      /* Resources */
-      .resources-bar {
-        position: relative;
-        z-index: 10;
-        background: rgba(0, 0, 0, 0.5);
-        padding: 10px 16px;
         display: flex;
+        align-items: center;
+      }
+
+      .resources-bar {
+        position: fixed;
+        top: 60px;
+        left: 0;
+        right: 0;
+        height: 40px;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: center;
         justify-content: center;
         gap: 24px;
+        z-index: 99;
         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
       }
 
@@ -1232,136 +1337,123 @@ function Styles() {
       }
 
       .resource-emoji {
-        font-size: 18px;
+        font-size: 16px;
       }
 
       .resource-value {
         font-size: 14px;
-        font-weight: 600;
-        color: #fbbf24;
+        font-weight: bold;
       }
 
-      /* Error */
       .error-banner {
-        position: relative;
-        z-index: 10;
-        background: #dc2626;
-        color: white;
+        position: fixed;
+        top: 100px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(220, 38, 38, 0.9);
         padding: 8px 16px;
-        text-align: center;
+        border-radius: 8px;
+        font-size: 14px;
+        z-index: 101;
       }
 
-      /* No Hero Message */
       .no-hero-message {
         position: fixed;
-        top: 50%;
+        top: 120px;
         left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 50;
+        transform: translateX(-50%);
+        z-index: 98;
+      }
+
+      .message-content {
+        background: rgba(139, 92, 246, 0.2);
+        border: 1px solid rgba(139, 92, 246, 0.4);
+        padding: 16px 24px;
+        border-radius: 12px;
         text-align: center;
       }
 
-      .no-hero-message .message-content {
-        background: rgba(0, 0, 0, 0.9);
-        border: 2px solid #fbbf24;
-        border-radius: 20px;
-        padding: 40px;
-        animation: pulse-glow 2s infinite;
+      .message-content h2 {
+        font-size: 18px;
+        margin: 0 0 8px;
       }
 
-      @keyframes pulse-glow {
-        0%, 100% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.3); }
-        50% { box-shadow: 0 0 40px rgba(251, 191, 36, 0.6); }
-      }
-
-      .no-hero-message h2 {
-        font-size: 24px;
-        margin-bottom: 12px;
-        color: #fbbf24;
-      }
-
-      .no-hero-message p {
-        color: #888;
-        margin-bottom: 20px;
+      .message-content p {
+        font-size: 14px;
+        color: #ccc;
+        margin: 0 0 12px;
       }
 
       .tavern-btn {
-        background: linear-gradient(to right, #f59e0b, #d97706) !important;
-        border: none !important;
-        font-size: 16px !important;
-        padding: 12px 24px !important;
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        border: none;
       }
 
-      /* Map */
       .map-container {
-        position: relative;
-        z-index: 5;
-        height: calc(100vh - 130px);
+        position: fixed;
+        top: 100px;
+        left: 0;
+        right: 0;
+        bottom: 0;
         overflow: hidden;
       }
 
       .map-toolbar {
         position: absolute;
         top: 16px;
-        left: 16px;
-        z-index: 10;
+        right: 16px;
         display: flex;
         gap: 8px;
+        z-index: 50;
       }
 
       .map-viewport {
         width: 100%;
         height: 100%;
+        overflow: hidden;
       }
 
-      /* Node Animations */
       .node-glow {
-        animation: glow-pulse 2s infinite;
+        animation: pulse 2s ease-in-out infinite;
       }
 
-      @keyframes glow-pulse {
+      @keyframes pulse {
         0%, 100% { opacity: 0.3; }
         50% { opacity: 0.6; }
       }
 
-      .node-body {
-        transition: all 0.2s ease;
-      }
-
       .hero-marker {
-        animation: hero-bounce 1s infinite;
+        animation: bounce 1s ease-in-out infinite;
       }
 
-      @keyframes hero-bounce {
+      @keyframes bounce {
         0%, 100% { transform: translateY(0); }
         50% { transform: translateY(-5px); }
       }
 
-      /* Selection Panel */
       .selection-panel {
         position: fixed;
-        bottom: 20px;
+        bottom: 100px;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.95);
+        background: rgba(0, 0, 0, 0.9);
         border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 16px;
         border-radius: 16px;
-        padding: 20px;
         min-width: 300px;
-        z-index: 20;
-        backdrop-filter: blur(10px);
+        z-index: 60;
       }
 
       .panel-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
       }
 
       .panel-header h3 {
+        margin: 0;
         font-size: 18px;
-        font-weight: 600;
       }
 
       .panel-header button {
@@ -1372,32 +1464,22 @@ function Styles() {
       }
 
       .panel-description {
+        font-size: 14px;
         color: #888;
-        font-size: 13px;
-        margin-bottom: 12px;
+        margin: 0 0 12px;
       }
 
       .monster-info {
         display: flex;
-        gap: 12px;
+        gap: 8px;
         margin-bottom: 12px;
         flex-wrap: wrap;
       }
 
-      .monster-badge {
-        background: #dc2626;
-        padding: 4px 12px;
-        border-radius: 8px;
-        font-size: 12px;
-      }
-
-      .monster-power {
-        color: #f87171;
-        font-size: 12px;
-      }
-
-      .monster-reward {
-        color: #fbbf24;
+      .monster-badge, .monster-power, .monster-reward {
+        background: rgba(220, 38, 38, 0.3);
+        padding: 4px 8px;
+        border-radius: 4px;
         font-size: 12px;
       }
 
@@ -1409,111 +1491,105 @@ function Styles() {
 
       .action-btn {
         flex: 1;
-        min-width: 120px;
       }
 
-      .tavern-action { background: linear-gradient(to right, #f59e0b, #d97706) !important; }
-      .move-action { background: linear-gradient(to right, #3b82f6, #2563eb) !important; }
-      .attack-action { background: linear-gradient(to right, #dc2626, #b91c1c) !important; }
-      .capture-action { background: linear-gradient(to right, #22c55e, #16a34a) !important; }
+      .move-action { background: linear-gradient(135deg, #3b82f6, #2563eb); border: none; }
+      .attack-action { background: linear-gradient(135deg, #dc2626, #b91c1c); border: none; }
+      .capture-action { background: linear-gradient(135deg, #22c55e, #16a34a); border: none; }
+      .tavern-action { background: linear-gradient(135deg, #f59e0b, #d97706); border: none; }
 
-      /* Hero Panel */
       .hero-panel {
         position: fixed;
-        bottom: 20px;
-        right: 20px;
+        bottom: 16px;
+        left: 16px;
         background: rgba(0, 0, 0, 0.9);
-        border: 1px solid rgba(251, 191, 36, 0.3);
-        border-radius: 16px;
-        padding: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 12px;
+        border-radius: 12px;
         display: flex;
         align-items: center;
-        gap: 16px;
-        z-index: 20;
+        gap: 12px;
+        z-index: 60;
       }
 
       .hero-avatar {
-        font-size: 48px;
-        background: linear-gradient(to bottom right, #fbbf24, #f59e0b);
-        border-radius: 12px;
-        width: 60px;
-        height: 60px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .hero-info {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
+        font-size: 36px;
       }
 
       .hero-name {
-        font-weight: 600;
         font-size: 14px;
+        font-weight: bold;
       }
 
-      .hero-bars .bar {
-        width: 150px;
-        height: 16px;
+      .hero-bars {
+        width: 120px;
+        margin-top: 4px;
+      }
+
+      .bar {
+        height: 8px;
         background: rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
-        overflow: hidden;
+        border-radius: 4px;
         position: relative;
+        overflow: hidden;
       }
 
       .bar-fill {
         height: 100%;
-        background: linear-gradient(to right, #ef4444, #dc2626);
-        transition: width 0.3s ease;
+        background: linear-gradient(90deg, #dc2626, #ef4444);
+        border-radius: 4px;
       }
 
       .bar span {
         position: absolute;
-        left: 8px;
+        left: 50%;
         top: 50%;
-        transform: translateY(-50%);
+        transform: translate(-50%, -50%);
         font-size: 10px;
+        white-space: nowrap;
       }
 
       .hero-stats-mini {
         display: flex;
-        gap: 12px;
+        gap: 8px;
+        margin-top: 4px;
         font-size: 11px;
         color: #888;
       }
 
-      /* Tavern Modal */
+      /* Модальные окна */
       .tavern-modal, .battle-modal {
         position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.9);
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.8);
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 100;
+        z-index: 200;
       }
 
       .tavern-content, .battle-content {
-        background: linear-gradient(to bottom, #1a1a2e, #0f0f1a);
+        background: linear-gradient(135deg, #1a1a2e, #16213e);
         border: 2px solid #f59e0b;
-        border-radius: 24px;
-        padding: 32px;
+        border-radius: 20px;
+        padding: 24px;
         max-width: 400px;
         width: 90%;
-        text-align: center;
       }
 
-      .tavern-header {
+      .tavern-header, .battle-result h2 {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 24px;
+        margin-bottom: 16px;
       }
 
-      .tavern-header h2 {
-        font-size: 28px;
+      .tavern-header h2, .battle-result h2 {
+        margin: 0;
+        font-size: 24px;
         color: #fbbf24;
       }
 
@@ -1526,53 +1602,50 @@ function Styles() {
 
       .tavern-description {
         color: #888;
-        margin-bottom: 24px;
-        line-height: 1.6;
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      .summon-area {
+        display: flex;
+        justify-content: center;
       }
 
       .summon-btn {
-        background: linear-gradient(to right, #f59e0b, #d97706) !important;
-        border: none !important;
-        padding: 16px 32px !important;
-        font-size: 16px !important;
-        display: flex !important;
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        border: none;
+        padding: 16px 32px;
+        font-size: 16px;
+        display: flex;
         align-items: center;
-        gap: 12px;
-        margin: 0 auto;
-      }
-
-      .free-badge {
-        background: #22c55e;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 10px;
-        font-weight: 700;
+        gap: 8px;
       }
 
       .rolling-hero {
-        padding: 40px;
+        text-align: center;
       }
 
       .hero-emoji.large {
-        font-size: 80px;
+        font-size: 64px;
         display: block;
-        animation: roll 0.1s infinite;
+        animation: shake 0.1s infinite;
       }
 
-      @keyframes roll {
-        0% { transform: rotate(-5deg); }
-        50% { transform: rotate(5deg); }
-        100% { transform: rotate(-5deg); }
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
       }
 
       .rolling-dots span {
-        animation: blink 0.5s infinite;
+        animation: dot 1s infinite;
+        font-size: 24px;
       }
 
-      .rolling-dots span:nth-child(2) { animation-delay: 0.1s; }
-      .rolling-dots span:nth-child(3) { animation-delay: 0.2s; }
+      .rolling-dots span:nth-child(2) { animation-delay: 0.2s; }
+      .rolling-dots span:nth-child(3) { animation-delay: 0.4s; }
 
-      @keyframes blink {
+      @keyframes dot {
         0%, 100% { opacity: 0.2; }
         50% { opacity: 1; }
       }
@@ -1582,61 +1655,53 @@ function Styles() {
       }
 
       .hero-card {
-        background: rgba(255, 255, 255, 0.05);
-        border: 2px solid #fbbf24;
-        border-radius: 16px;
-        padding: 24px;
-        margin-bottom: 20px;
+        background: rgba(139, 92, 246, 0.2);
+        border: 1px solid rgba(139, 92, 246, 0.4);
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 16px;
       }
 
       .hero-card .hero-emoji {
-        font-size: 64px;
-        margin-bottom: 12px;
+        font-size: 48px;
+        margin-bottom: 8px;
       }
 
       .hero-card h3 {
-        font-size: 20px;
-        margin-bottom: 4px;
+        margin: 0 0 4px;
+        color: #fbbf24;
       }
 
       .hero-class {
-        color: #fbbf24;
-        margin-bottom: 12px;
+        color: #888;
+        margin: 0 0 12px;
       }
 
       .hero-stats {
         display: flex;
         justify-content: center;
         gap: 16px;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
       }
 
       .hero-skill {
-        color: #22c55e;
-        font-size: 14px;
+        color: #a78bfa;
+        margin: 0;
       }
 
       .close-btn {
-        background: linear-gradient(to right, #22c55e, #16a34a) !important;
-        border: none !important;
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        border: none;
+        width: 100%;
       }
 
-      /* Battle Modal */
       .battle-result {
-        padding: 20px;
+        text-align: center;
       }
 
-      .battle-result.victory .result-icon { font-size: 80px; animation: victory 0.5s ease; }
-      .battle-result.defeat .result-icon { font-size: 80px; animation: defeat 0.5s ease; }
-
-      @keyframes victory {
-        0% { transform: scale(0) rotate(-180deg); }
-        100% { transform: scale(1) rotate(0deg); }
-      }
-
-      @keyframes defeat {
-        0% { transform: translateY(-50px); opacity: 0; }
-        100% { transform: translateY(0); opacity: 1; }
+      .result-icon {
+        font-size: 64px;
+        margin-bottom: 16px;
       }
 
       .battle-result.victory h2 { color: #22c55e; }
@@ -1650,50 +1715,49 @@ function Styles() {
       }
 
       .reward-item {
-        background: rgba(251, 191, 36, 0.2);
+        background: rgba(34, 197, 94, 0.2);
         padding: 8px 16px;
         border-radius: 8px;
-        color: #fbbf24;
+        font-size: 16px;
       }
 
-      /* Music Button */
       .music-btn {
         position: fixed;
-        bottom: 20px;
-        left: 20px;
+        bottom: 16px;
+        right: 16px;
+        background: rgba(0, 0, 0, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
         width: 44px;
         height: 44px;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        color: #fff;
-        cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 50;
+        cursor: pointer;
+        z-index: 60;
+        color: white;
       }
 
-      /* Responsive */
+      .turn-btn {
+        background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        border: none;
+      }
+
       @media (max-width: 768px) {
         .race-grid {
           grid-template-columns: repeat(2, 1fr);
-        }
-
-        .resources-bar {
-          gap: 12px;
+          max-width: 320px;
         }
 
         .hero-panel {
-          right: 10px;
-          left: 10px;
-          bottom: 100px;
-          transform: none;
+          left: 8px;
+          right: 8px;
+          bottom: 8px;
         }
 
         .selection-panel {
-          left: 10px;
-          right: 10px;
+          left: 8px;
+          right: 8px;
           transform: none;
           min-width: auto;
         }
