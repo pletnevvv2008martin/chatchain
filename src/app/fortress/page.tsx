@@ -661,69 +661,13 @@ export default function FortressPage() {
     }
   }, [router]);
 
-  // Подключение к серверу
+  // Инициализация игры
   useEffect(() => {
     if (!userId || !userName) return;
-
-    const connectToServer = async () => {
-      try {
-        const gameClient = new Client(GAME_SERVER);
-        const gameRoom = await gameClient.joinOrCreate('fortress', {
-          name: userName,
-          userId: userId,
-          mapId: 'green_valley'
-        });
-
-        setRoom(gameRoom);
-        setConnected(true);
-        setLoading(false);
-
-        gameRoom.onStateChange((newState: any) => {
-          if (newState.players && gameRoom.sessionId) {
-            const p = newState.players.get(gameRoom.sessionId);
-            if (p) {
-              setPlayer(p);
-              setRace(p.race);
-              
-              if (newState.maps && p.currentMapId) {
-                const map = newState.maps.get(p.currentMapId);
-                if (map) setCurrentMap(map);
-              }
-              
-              if (p.heroes && p.heroes.length > 0) {
-                setHero(p.heroes[0]);
-              }
-            }
-          }
-        });
-
-        gameRoom.onMessage('error', (msg: any) => {
-          setError(msg.message);
-          setTimeout(() => setError(''), 3000);
-        });
-
-        gameRoom.onMessage('hero_summoned', (msg: any) => {
-          setSummonedHero(msg.hero);
-          setHero(msg.hero);
-        });
-
-        gameRoom.onMessage('battle_result', (msg: any) => {
-          setBattleResult(msg);
-        });
-
-        gameRoom.onError((code, message) => {
-          setError(`Ошибка: ${message}`);
-          setConnected(false);
-        });
-
-      } catch (err: any) {
-        console.error('Connection error:', err);
-        // Оффлайн режим - создаём локальную игру
-        initLocalGame();
-      }
-    };
-
-    connectToServer();
+    
+    // Сразу запускаем локальную игру (оффлайн режим)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    initLocalGame();
   }, [userId, userName, initLocalGame]);
 
   // Выбор расы
