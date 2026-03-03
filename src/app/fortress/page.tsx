@@ -3,323 +3,276 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { 
+import { Client, Room } from 'colyseus.js';
+import {
   Castle, Swords, Shield, Coins, TreeDeciduous, Mountain, Cog, Drumstick, Zap,
   Crown, Lock, X, ArrowLeft, RefreshCw, Volume2, VolumeX,
   Crosshair, Flag, Eye, Move, ZoomIn, ZoomOut, Heart, Skull, Chest,
-  Sparkles, Flame, Users
+  Sparkles, Flame, Users, Map as MapIcon, Compass, Star, Trophy
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle,
-  DialogFooter 
-} from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-// Константы карты
-const MAP_WIDTH = 30;
-const MAP_HEIGHT = 20;
-const HEX_SIZE = 50;
+// ============================================
+// ТИПЫ
+// ============================================
 
-// Типы клеток
-type CellType = 'grass' | 'forest' | 'mountain' | 'water' | 'desert' | 'snow' | 'swamp' | 'lava' | 'void';
+type RaceId = 'human' | 'elf' | 'dwarf' | 'darkElf' | 'undead' | 'werewolf' | 'orc' | 'mage' | 'vampire' | 'dragonborn';
+type NodeType = 'castle' | 'town' | 'village' | 'gold_mine' | 'stone_quarry' | 'lumber_mill' | 'iron_mine' | 'farm' | 'mana_well' | 'monster_lair' | 'teleport' | 'obelisk';
 
-// Типы объектов
-interface MapObject {
-  id: string;
-  type: 'castle' | 'resource' | 'monster' | 'treasure' | 'portal' | 'dungeon' | 'town';
-  x: number;
-  y: number;
-  owner?: string;
-  data?: any;
+interface Resources {
+  gold: number;
+  stone: number;
+  wood: number;
+  iron: number;
+  food: number;
+  mana: number;
+  gems: number;
+  teleportScrolls: number;
 }
 
-interface MapCell {
-  type: CellType;
-  object?: MapObject;
-  visible: boolean;
-  explored: boolean;
+interface Army {
+  warriors: number;
+  archers: number;
+  cavalry: number;
+  mages: number;
+  totalPower: number;
+}
+
+interface Hero {
+  id: string;
+  name: string;
+  currentNodeId: string;
+  x: number;
+  y: number;
+  level: number;
+  experience: number;
+  army: Army;
+  movementPoints: number;
+  maxMovement: number;
+  attack: number;
+  defense: number;
+}
+
+interface MapNode {
+  id: string;
+  type: NodeType;
+  name: string;
+  x: number;
+  y: number;
+  ownerId: string;
+  ownerName: string;
+  heroId: string;
+  garrison: number;
+  defense: number;
+  connections: string[];
+  goldReward: number;
+  monsterPower: number;
+  monsterType: string;
+  terrain: string;
+  isTerritory: boolean;
+}
+
+interface Teleport {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  targetMapId: string;
+  targetTeleportId: string;
+  cost: number;
+  type: 'teleport' | 'obelisk';
+}
+
+interface GameMap {
+  id: string;
+  name: string;
+  theme: string;
+  maxPlayers: number;
+  currentPlayerCount: number;
+  nodes: Map<string, MapNode>;
+  teleports: Map<string, Teleport>;
 }
 
 interface Player {
   id: string;
   name: string;
-  race: string;
-  raceEmoji: string;
-  x: number;
-  y: number;
-  armyPower: number;
+  race: RaceId;
   color: string;
-  resources: Record<string, number>;
-  movementPoints: number;
-  maxMovement: number;
-  lastUpdate: string;
+  resources: Resources;
+  heroes: Map<string, Hero>;
+  buildings: Map<string, { id: string; level: number }>;
+  castleNodeId: string;
+  territory: { centerX: number; centerY: number; radius: number; ownedNodes: string[]; defenseBonus: number };
+  score: number;
+  battlesWon: number;
+  battlesLost: number;
+  online: boolean;
+  lastActive: number;
+  isRegistered: boolean;
+  currentMapId: string;
+  stats: {
+    fortress: { totalGames: number; wins: number; losses: number; score: number; playTime: number };
+    mafia: { totalGames: number; wins: number; losses: number; score: number };
+    duel: { totalGames: number; wins: number; losses: number; score: number };
+    chain: { totalGames: number; wins: number; losses: number; score: number };
+    poker: { totalGames: number; wins: number; losses: number; score: number };
+  };
 }
 
-interface ResourceNode {
-  id: string;
-  type: 'gold_mine' | 'stone_quarry' | 'lumber_mill' | 'iron_mine' | 'farm' | 'mana_well';
-  x: number;
-  y: number;
-  owner?: string;
-  production: Record<string, number>;
+interface FortressState {
+  players: Map<string, Player>;
+  maps: Map<string, GameMap>;
+  chat: string[];
+  turn: number;
+  lastUpdate: number;
+  gamePhase: string;
+  activeMapId: string;
 }
 
-interface Monster {
-  id: string;
-  name: string;
-  emoji: string;
-  x: number;
-  y: number;
-  power: number;
-  reward: { gold: number; xp: number; };
-}
+// ============================================
+// КОНСТАНТЫ
+// ============================================
 
-interface BattleResult {
-  won: boolean;
-  losses: number;
-  loot: Record<string, number>;
-  message: string;
-}
+const RACE_EMOJIS: Record<RaceId, string> = {
+  human: '👤', elf: '🧝', dwarf: '🪓', darkElf: '🦇', undead: '🦴',
+  werewolf: '🐺', orc: '🧌', mage: '🧙', vampire: '🧛', dragonborn: '🐲'
+};
 
-// Цвета рас
-const RACE_COLORS: Record<string, string> = {
+const RACE_COLORS: Record<RaceId, string> = {
   human: '#4a90d9', elf: '#4ade80', dwarf: '#f59e0b', darkElf: '#a855f7',
   undead: '#2dd4bf', werewolf: '#78716c', orc: '#84cc16', mage: '#3b82f6',
   vampire: '#dc2626', dragonborn: '#f97316'
 };
 
-const RACE_EMOJIS: Record<string, string> = {
-  human: '👤', elf: '🧝', dwarf: '🪓', darkElf: '🦇', undead: '🦴',
-  werewolf: '🐺', orc: '🧌', mage: '🧙', vampire: '🧛', dragonborn: '🐲'
+const NODE_CONFIG: Record<NodeType, { emoji: string; name: string }> = {
+  castle: { emoji: '🏰', name: 'Замок' },
+  town: { emoji: '🏘️', name: 'Город' },
+  village: { emoji: '🏠', name: 'Деревня' },
+  gold_mine: { emoji: '💰', name: 'Золотая шахта' },
+  stone_quarry: { emoji: '🪨', name: 'Каменоломня' },
+  lumber_mill: { emoji: '🪵', name: 'Лесопилка' },
+  iron_mine: { emoji: '⚙️', name: 'Железная шахта' },
+  farm: { emoji: '🌾', name: 'Ферма' },
+  mana_well: { emoji: '🔮', name: 'Источник маны' },
+  monster_lair: { emoji: '🐉', name: 'Логово монстров' },
+  teleport: { emoji: '🌀', name: 'Телепорт' },
+  obelisk: { emoji: '🗼', name: 'Обелиск' },
 };
 
-// Эмодзи для типов клеток
-const CELL_EMOJI: Record<CellType, string> = {
-  grass: '🌿', forest: '🌲', mountain: '⛰️', water: '🌊',
-  desert: '🏜️', snow: '❄️', swamp: '🍄', lava: '🔥', void: '🌑'
-};
-
-// Цвета клеток
-const CELL_COLORS: Record<CellType, string> = {
-  grass: '#2d5a3d', forest: '#1a472a', mountain: '#4a5568', water: '#1e40af',
-  desert: '#b45309', snow: '#e2e8f0', swamp: '#4a5568', lava: '#7f1d1d', void: '#1a1a1a'
-};
-
-// Типы ресурсов
-const RESOURCE_TYPES = {
-  gold_mine: { emoji: '💰', production: { gold: 100 }, name: 'Золотая шахта' },
-  stone_quarry: { emoji: '🪨', production: { stone: 80 }, name: 'Каменоломня' },
-  lumber_mill: { emoji: '🪵', production: { wood: 60 }, name: 'Лесопилка' },
-  iron_mine: { emoji: '⚙️', production: { iron: 40 }, name: 'Железный рудник' },
-  farm: { emoji: '🌾', production: { food: 100 }, name: 'Ферма' },
-  mana_well: { emoji: '🔮', production: { mana: 30 }, name: 'Источник маны' },
-};
-
-// Монстры
-const MONSTER_TYPES = [
-  { name: 'Гоблины', emoji: '👺', powerBase: 50, rewardBase: 200 },
-  { name: 'Орки', emoji: '👹', powerBase: 100, rewardBase: 400 },
-  { name: 'Дракон', emoji: '🐉', powerBase: 300, rewardBase: 1500 },
-  { name: 'Некромант', emoji: '💀', powerBase: 200, rewardBase: 800 },
-  { name: 'Демон', emoji: '😈', powerBase: 250, rewardBase: 1000 },
-  { name: 'Титан', emoji: '🗿', powerBase: 500, rewardBase: 3000 },
+const FANTASY_MAPS = [
+  { id: 'green_valley', name: '🌿 Зелёная Долина', theme: 'forest', bgColor: '#1a472a', description: 'Мирные земли с богатыми ресурсами' },
+  { id: 'frozen_peaks', name: '❄️ Ледяные Вершины', theme: 'ice', bgColor: '#1a3a5c', description: 'Холодные горы с редкими кристаллами' },
+  { id: 'volcanic_lands', name: '🌋 Вулканические Земли', theme: 'fire', bgColor: '#4a1a1a', description: 'Опасные земли с редкой магмой' },
+  { id: 'dark_swamp', name: '🕳️ Тёмное Болото', theme: 'swamp', bgColor: '#1a3a2a', description: 'Зловещие топи с древними артефактами' },
+  { id: 'desert_dunes', name: '🏜️ Пустынные Дюны', theme: 'desert', bgColor: '#5a4a2a', description: 'Бескрайние пески с древними гробницами' },
+  { id: 'enchanted_forest', name: '🧚 Зачарованный Лес', theme: 'magic', bgColor: '#2a1a4a', description: 'Магический лес с феями и эльфами' },
+  { id: 'undead_realm', name: '💀 Царство Нежити', theme: 'undead', bgColor: '#1a1a2a', description: 'Земли проклятых с древними сокровищами' },
+  { id: 'dragon_lair', name: '🐉 Логово Драконов', theme: 'dragon', bgColor: '#3a1a1a', description: 'Огненные земли с несметными сокровищами' },
+  { id: 'celestial_peaks', name: '☁️ Небесные Вершины', theme: 'sky', bgColor: '#1a2a4a', description: 'Парящие острова с небесными ресурсами' },
+  { id: 'abyss_depths', name: '🌊 Бездна Глубин', theme: 'water', bgColor: '#0a2a3a', description: 'Подводные пещеры с затонувшими сокровищами' },
 ];
 
-// Генерация карты
-function generateMap(): MapCell[][] {
-  const map: MapCell[][] = [];
-  
-  for (let y = 0; y < MAP_HEIGHT; y++) {
-    map[y] = [];
-    for (let x = 0; x < MAP_WIDTH; x++) {
-      // Определяем тип клетки
-      let type: CellType = 'grass';
-      const rand = Math.random();
-      
-      if (rand < 0.15) type = 'forest';
-      else if (rand < 0.25) type = 'mountain';
-      else if (rand < 0.32) type = 'water';
-      else if (rand < 0.37) type = 'desert';
-      else if (rand < 0.42) type = 'snow';
-      else if (rand < 0.45) type = 'swamp';
-      
-      map[y][x] = { type, visible: false, explored: false };
-    }
-  }
-  
-  return map;
-}
+const GAME_SERVER = process.env.NEXT_PUBLIC_GAME_SERVER || 'wss://179.61.145.218:2567';
 
-// Генерация ресурсов
-function generateResources(): ResourceNode[] {
-  const resources: ResourceNode[] = [];
-  const types = Object.keys(RESOURCE_TYPES) as Array<keyof typeof RESOURCE_TYPES>;
-  
-  for (let i = 0; i < 30; i++) {
-    const type = types[Math.floor(Math.random() * types.length)];
-    resources.push({
-      id: `res-${i}`,
-      type,
-      x: Math.floor(Math.random() * MAP_WIDTH),
-      y: Math.floor(Math.random() * MAP_HEIGHT),
-      production: RESOURCE_TYPES[type].production,
-    });
-  }
-  
-  return resources;
-}
+// ============================================
+// КОМПОНЕНТЫ
+// ============================================
 
-// Генерация монстров
-function generateMonsters(): Monster[] {
-  const monsters: Monster[] = [];
-  
-  for (let i = 0; i < 20; i++) {
-    const type = MONSTER_TYPES[Math.floor(Math.random() * MONSTER_TYPES.length)];
-    const multiplier = 0.5 + Math.random();
-    
-    monsters.push({
-      id: `mob-${i}`,
-      name: type.name,
-      emoji: type.emoji,
-      x: Math.floor(Math.random() * MAP_WIDTH),
-      y: Math.floor(Math.random() * MAP_HEIGHT),
-      power: Math.floor(type.powerBase * multiplier),
-      reward: {
-        gold: Math.floor(type.rewardBase * multiplier),
-        xp: Math.floor(type.rewardBase * multiplier * 0.5),
-      },
-    });
-  }
-  
-  return monsters;
-}
-
-// Открытие области карты
-const revealArea = (mapData: MapCell[][], cx: number, cy: number, radius: number) => {
-  for (let y = 0; y < MAP_HEIGHT; y++) {
-    for (let x = 0; x < MAP_WIDTH; x++) {
-      const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
-      if (dist <= radius) {
-        mapData[y][x].visible = true;
-        mapData[y][x].explored = true;
-      } else if (mapData[y][x].explored) {
-        mapData[y][x].visible = false;
-      }
-    }
-  }
-};
-
-// Компонент гекса
-function HexCell({ 
-  cell, x, y, size, isPlayerHere, isEnemyHere, playerColor, 
-  resource, monster, isSelected, onClick 
+function MapNodeComponent({
+  node, isSelected, isMyNode, isEnemyNode, myColor, playerHere, onClick
 }: {
-  cell: MapCell;
-  x: number;
-  y: number;
-  size: number;
-  isPlayerHere: boolean;
-  isEnemyHere: boolean;
-  playerColor?: string;
-  resource?: ResourceNode;
-  monster?: Monster;
+  node: MapNode;
   isSelected: boolean;
+  isMyNode: boolean;
+  isEnemyNode: boolean;
+  myColor: string;
+  playerHere?: { name: string; color: string; emoji: string };
   onClick: () => void;
 }) {
-  const hexWidth = size * 1.73;
-  const hexHeight = size * 2;
-  const offsetX = (y % 2) * (hexWidth / 2);
-  
-  // Координаты центра гекса
-  const centerX = x * hexWidth + offsetX + hexWidth / 2;
-  const centerY = y * (hexHeight * 0.75) + hexHeight / 2;
-  
-  // Точки гекса
-  const points = [];
-  for (let i = 0; i < 6; i++) {
-    const angle = (Math.PI / 3) * i - Math.PI / 6;
-    points.push([
-      centerX + size * Math.cos(angle),
-      centerY + size * Math.sin(angle),
-    ]);
-  }
-  const pointsStr = points.map(p => p.join(',')).join(' ');
-  
-  const isWalkable = cell.type !== 'water' && cell.type !== 'mountain' && cell.type !== 'lava';
-  
+  const config = NODE_CONFIG[node.type] || NODE_CONFIG.village;
+
   return (
     <g onClick={onClick} style={{ cursor: 'pointer' }}>
-      {/* Гекс */}
-      <polygon
-        points={pointsStr}
-        fill={CELL_COLORS[cell.type]}
-        stroke={isSelected ? '#ffd700' : cell.explored ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.5)'}
+      {/* Фон узла */}
+      <circle
+        cx={node.x}
+        cy={node.y}
+        r={35}
+        fill={isMyNode ? myColor : isEnemyNode ? '#dc2626' : node.isTerritory ? '#22c55e' : '#2a2a3a'}
+        stroke={isSelected ? '#ffd700' : node.ownerId ? RACE_COLORS.human : '#444'}
         strokeWidth={isSelected ? 3 : 1}
-        opacity={cell.explored ? 1 : 0.3}
+        opacity={0.9}
       />
-      
-      {/* Иконка клетки */}
-      {cell.explored && !isPlayerHere && !isEnemyHere && !resource && !monster && (
-        <text
-          x={centerX}
-          y={centerY + 5}
-          textAnchor="middle"
-          fontSize={size * 0.4}
-          opacity={0.5}
-        >
-          {CELL_EMOJI[cell.type]}
+
+      {/* Иконка */}
+      <text x={node.x} y={node.y + 5} textAnchor="middle" fontSize={24}>
+        {node.monsterPower > 0 ? '🐉' : config.emoji}
+      </text>
+
+      {/* Информация о монстре */}
+      {node.monsterPower > 0 && (
+        <text x={node.x} y={node.y + 50} textAnchor="middle" fontSize={10} fill="#ef4444">
+          ⚔️{node.monsterPower}
         </text>
       )}
-      
-      {/* Ресурс */}
-      {resource && (
-        <text x={centerX} y={centerY + 5} textAnchor="middle" fontSize={size * 0.5}>
-          {RESOURCE_TYPES[resource.type].emoji}
+
+      {/* Гарнизон */}
+      {node.garrison > 0 && (
+        <text x={node.x} y={node.y - 25} textAnchor="middle" fontSize={10} fill="#22c55e">
+          🛡️{node.garrison}
         </text>
       )}
-      
-      {/* Монстр */}
-      {monster && (
+
+      {/* Игрок на узле */}
+      {playerHere && (
         <g>
-          <text x={centerX} y={centerY + 5} textAnchor="middle" fontSize={size * 0.5}>
-            {monster.emoji}
-          </text>
-          <text x={centerX} y={centerY + size * 0.6} textAnchor="middle" fontSize={size * 0.2} fill="#ef4444">
-            ⚔️{monster.power}
+          <circle cx={node.x + 25} cy={node.y - 25} r={15} fill={playerHere.color} />
+          <text x={node.x + 25} y={playerHere.y - 20} textAnchor="middle" fontSize={14}>
+            {playerHere.emoji}
           </text>
         </g>
       )}
-      
-      {/* Игрок */}
-      {isPlayerHere && (
-        <g>
-          <circle cx={centerX} cy={centerY} r={size * 0.35} fill={playerColor} opacity={0.8} />
-          <text x={centerX} y={centerY + 5} textAnchor="middle" fontSize={size * 0.5}>
-            🏰
-          </text>
-        </g>
-      )}
-      
-      {/* Враг */}
-      {isEnemyHere && (
-        <g>
-          <circle cx={centerX} cy={centerY} r={size * 0.3} fill="#dc2626" opacity={0.6} />
-          <text x={centerX} y={centerY + 4} textAnchor="middle" fontSize={size * 0.4}>
-            👤
-          </text>
-        </g>
+
+      {/* Владелец */}
+      {node.ownerName && (
+        <text x={node.x} y={node.y + 55} textAnchor="middle" fontSize={9} fill="#aaa">
+          {node.ownerName.slice(0, 10)}
+        </text>
       )}
     </g>
   );
 }
 
-// Музыка
+function TeleportComponent({
+  teleport, onClick, isSelected
+}: {
+  teleport: Teleport;
+  onClick: () => void;
+  isSelected: boolean;
+}) {
+  return (
+    <g onClick={onClick} style={{ cursor: 'pointer' }}>
+      <circle
+        cx={teleport.x}
+        cy={teleport.y}
+        r={30}
+        fill={teleport.type === 'obelisk' ? '#8b5cf6' : '#06b6d4'}
+        stroke={isSelected ? '#ffd700' : '#fff'}
+        strokeWidth={isSelected ? 3 : 1}
+        opacity={0.8}
+      />
+      <text x={teleport.x} y={teleport.y + 5} textAnchor="middle" fontSize={24}>
+        {teleport.type === 'obelisk' ? '🗼' : '🌀'}
+      </text>
+      <text x={teleport.x} y={teleport.y + 45} textAnchor="middle" fontSize={10} fill="#fff">
+        {teleport.cost}💰
+      </text>
+    </g>
+  );
+}
+
 function BackgroundMusic() {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -356,34 +309,50 @@ function BackgroundMusic() {
   );
 }
 
+// ============================================
+// ГЛАВНЫЙ КОМПОНЕНТ
+// ============================================
+
 export default function FortressPage() {
   const router = useRouter();
+
+  // Пользователь
   const [userId, setUserId] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
-  const [race, setRace] = useState<string>('');
+  const [isRegistered, setIsRegistered] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
-  
-  // Карта
-  const [map, setMap] = useState<MapCell[][]>([]);
-  const [resources, setResources] = useState<ResourceNode[]>([]);
-  const [monsters, setMonsters] = useState<Monster[]>([]);
-  const [players, setPlayers] = useState<Player[]>([]);
+
+  // Сеть
+  const [client, setClient] = useState<Client | null>(null);
+  const [room, setRoom] = useState<Room<FortressState> | null>(null);
+  const [connected, setConnected] = useState(false);
+  const [error, setError] = useState<string>('');
+
+  // Состояние игры
+  const [state, setState] = useState<FortressState | null>(null);
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
-  
-  // UI
+  const [currentMap, setCurrentMap] = useState<GameMap | null>(null);
+  const [selectedNode, setSelectedNode] = useState<MapNode | null>(null);
+  const [selectedTeleport, setSelectedTeleport] = useState<Teleport | null>(null);
   const [activeTab, setActiveTab] = useState('map');
-  const [selectedCell, setSelectedCell] = useState<{x: number, y: number} | null>(null);
+
+  // UI
+  const [showRaceSelect, setShowRaceSelect] = useState(false);
+  const [showMapSelect, setShowMapSelect] = useState(false);
+  const [race, setRace] = useState<RaceId>('human');
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  
-  // Модальные окна
-  const [showBattle, setShowBattle] = useState(false);
-  const [battleResult, setBattleResult] = useState<BattleResult | null>(null);
-  const [selectedTarget, setSelectedTarget] = useState<Monster | ResourceNode | Player | null>(null);
 
-  // Загрузка пользователя
+  // Чат
+  const [chatMessages, setChatMessages] = useState<string[]>([]);
+  const [chatInput, setChatInput] = useState('');
+
+  // ============================================
+  // ЗАГРУЗКА ПОЛЬЗОВАТЕЛЯ
+  // ============================================
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const storedUser = localStorage.getItem('chatchain_user');
@@ -391,190 +360,242 @@ export default function FortressPage() {
       const user = JSON.parse(storedUser);
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setUserId(user.id);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setUserName(user.nickname);
+       
+      setIsRegistered(true);
     } else {
-      router.push('/');
+      // Гость
+      const guestId = 'guest-' + Date.now();
+       
+      setUserId(guestId);
+       
+      setUserName('Гость');
+       
+      setIsRegistered(false);
     }
-  }, [router]);
+  }, []);
 
-  // Инициализация карты
+  // ============================================
+  // ПОДКЛЮЧЕНИЕ К СЕРВЕРУ
+  // ============================================
+
   useEffect(() => {
     if (!userId || !userName) return;
-    
-    // Генерируем карту
-    const newMap = generateMap();
-    const newResources = generateResources();
-    const newMonsters = generateMonsters();
-    
-    // Создаём игрока
-    const startX = Math.floor(MAP_WIDTH / 2);
-    const startY = Math.floor(MAP_HEIGHT / 2);
-    
-    const player: Player = {
-      id: userId,
-      name: userName,
-      race: 'human',
-      raceEmoji: '👤',
-      x: startX,
-      y: startY,
-      armyPower: 100,
-      color: RACE_COLORS.human,
-      resources: { gold: 500, stone: 200, wood: 200, iron: 100, food: 300, mana: 50 },
-      movementPoints: 10,
-      maxMovement: 10,
-      lastUpdate: new Date().toISOString(),
-    };
-    
-    // Открываем область вокруг игрока
-    revealArea(newMap, startX, startY, 3);
-    newMap[startY][startX].explored = true;
-    
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMap(newMap);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setResources(newResources);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMonsters(newMonsters);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCurrentPlayer(player);
-    setLoading(false);
-  }, [userId, userName]);
 
-  // Движение игрока
-  const movePlayer = (targetX: number, targetY: number) => {
-    if (!currentPlayer || currentPlayer.movementPoints <= 0) return;
-    
-    const cell = map[targetY]?.[targetX];
-    if (!cell || cell.type === 'water' || cell.type === 'mountain') return;
-    
-    const distance = Math.sqrt((targetX - currentPlayer.x) ** 2 + (targetY - currentPlayer.y) ** 2);
-    if (distance > 3) return; // Максимальная дальность хода
-    
-    const newMovement = currentPlayer.movementPoints - 1;
-    
-    setCurrentPlayer(prev => {
-      if (!prev) return prev;
-      return { ...prev, x: targetX, y: targetY, movementPoints: newMovement };
-    });
-    
-    // Открываем новую область
-    setMap(prev => {
-      const newMap = prev.map(row => row.map(cell => ({ ...cell })));
-      revealArea(newMap, targetX, targetY, 3);
-      return newMap;
-    });
-    
-    setSelectedCell({ x: targetX, y: targetY });
-  };
+    const connectToServer = async () => {
+      try {
+        const gameClient = new Client(GAME_SERVER);
+        setClient(gameClient);
 
-  // Атака монстра
-  const attackMonster = (monster: Monster) => {
-    if (!currentPlayer) return;
-    
-    const won = currentPlayer.armyPower > monster.power * (0.7 + Math.random() * 0.3);
-    const losses = won ? Math.floor(currentPlayer.armyPower * 0.1 * Math.random()) : Math.floor(currentPlayer.armyPower * 0.5);
-    
-    if (won) {
-      setCurrentPlayer(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          armyPower: prev.armyPower - losses,
-          resources: {
-            ...prev.resources,
-            gold: prev.resources.gold + monster.reward.gold,
-          },
-        };
-      });
-      setMonsters(prev => prev.filter(m => m.id !== monster.id));
-    } else {
-      setCurrentPlayer(prev => {
-        if (!prev) return prev;
-        return { ...prev, armyPower: Math.max(10, prev.armyPower - losses) };
-      });
-    }
-    
-    setBattleResult({
-      won,
-      losses,
-      loot: won ? { gold: monster.reward.gold } : {},
-      message: won ? `Победа над ${monster.name}!` : `${monster.name} победил...`,
-    });
-    setShowBattle(true);
-    setSelectedTarget(null);
-  };
-
-  // Захват ресурса
-  const captureResource = (resource: ResourceNode) => {
-    if (!currentPlayer) return;
-    
-    setResources(prev => prev.map(r => 
-      r.id === resource.id ? { ...r, owner: userId } : r
-    ));
-    setSelectedTarget(null);
-  };
-
-  // Следующий ход
-  const nextTurn = () => {
-    if (!currentPlayer) return;
-    
-    // Восстанавливаем очки движения
-    setCurrentPlayer(prev => {
-      if (!prev) return prev;
-      return { ...prev, movementPoints: prev.maxMovement };
-    });
-    
-    // Начисляем ресурсы с захваченных точек
-    resources.filter(r => r.owner === userId).forEach(resource => {
-      setCurrentPlayer(prev => {
-        if (!prev) return prev;
-        const newResources = { ...prev.resources };
-        Object.entries(resource.production).forEach(([key, value]) => {
-          newResources[key] = (newResources[key] || 0) + value;
+        const gameRoom = await gameClient.joinOrCreate<FortressState>('fortress', {
+          name: userName,
+          userId: userId,
+          isRegistered: isRegistered,
+          mapId: 'green_valley'
         });
-        return { ...prev, resources: newResources };
-      });
-    });
+
+        setRoom(gameRoom);
+        setConnected(true);
+        setLoading(false);
+
+        // Обработка изменений состояния
+        gameRoom.onStateChange((newState) => {
+          setState(newState);
+
+          const player = newState.players.get(gameRoom.sessionId);
+          if (player) {
+            setCurrentPlayer(player);
+            setRace(player.race);
+
+            const map = newState.maps.get(player.currentMapId);
+            if (map) {
+              setCurrentMap(map);
+            }
+          }
+        });
+
+        // Системные сообщения
+        gameRoom.onMessage('system_message', (msg) => {
+          setChatMessages(prev => [...prev.slice(-50), msg.content]);
+        });
+
+        gameRoom.onMessage('error', (msg) => {
+          setError(msg.message);
+          setTimeout(() => setError(''), 3000);
+        });
+
+        gameRoom.onMessage('state_sync', (msg) => {
+          console.log('State sync:', msg);
+        });
+
+        gameRoom.onMessage('redirect_map', (msg) => {
+          console.log('Redirected to map:', msg.mapId);
+        });
+
+        gameRoom.onMessage('map_changed', (msg) => {
+          console.log('Map changed:', msg.mapId);
+        });
+
+        // Ошибки соединения
+        gameRoom.onError((code, message) => {
+          console.error('Room error:', code, message);
+          setError(`Ошибка: ${message}`);
+          setConnected(false);
+        });
+
+        gameRoom.onLeave((code) => {
+          console.log('Left room:', code);
+          setConnected(false);
+        });
+
+      } catch (err: any) {
+        console.error('Connection error:', err);
+        setError(`Не удалось подключиться: ${err.message}`);
+        setLoading(false);
+      }
+    };
+
+    connectToServer();
+
+    return () => {
+      if (room) {
+        room.leave();
+      }
+    };
+  }, [userId, userName, isRegistered]);
+
+  // ============================================
+  // ОБРАБОТЧИКИ ДЕЙСТВИЙ
+  // ============================================
+
+  const selectRace = (raceId: RaceId) => {
+    if (room) {
+      room.send('select_race', raceId);
+    }
+    setRace(raceId);
+    localStorage.setItem('chatchain_fortress_race', raceId);
+    setShowRaceSelect(false);
   };
 
-  // Форматирование чисел
+  const moveHero = (targetNodeId: string) => {
+    if (!room || !currentPlayer) return;
+    const heroId = Array.from(currentPlayer.heroes.keys())[0];
+    if (heroId) {
+      room.send('move_hero', { heroId, targetNodeId });
+    }
+    setSelectedNode(null);
+  };
+
+  const attackNode = (targetNodeId: string) => {
+    if (!room || !currentPlayer) return;
+    const heroId = Array.from(currentPlayer.heroes.keys())[0];
+    if (heroId) {
+      room.send('attack_node', { heroId, targetNodeId });
+    }
+    setSelectedNode(null);
+  };
+
+  const captureNode = (targetNodeId: string) => {
+    if (!room || !currentPlayer) return;
+    const heroId = Array.from(currentPlayer.heroes.keys())[0];
+    if (heroId) {
+      room.send('capture_node', { heroId, targetNodeId });
+    }
+    setSelectedNode(null);
+  };
+
+  const teleportHero = (teleportId: string) => {
+    if (!room || !currentPlayer) return;
+    const heroId = Array.from(currentPlayer.heroes.keys())[0];
+    if (heroId) {
+      room.send('use_teleport', { heroId, teleportId });
+    }
+    setSelectedTeleport(null);
+  };
+
+  const changeMap = (targetMapId: string) => {
+    if (!room) return;
+    room.send('change_map', { obeliskId: `${currentPlayer?.currentMapId}_obelisk`, targetMapId });
+    setShowMapSelect(false);
+    setSelectedTeleport(null);
+  };
+
+  const endTurn = () => {
+    if (room) {
+      room.send('end_turn');
+    }
+  };
+
+  const recruit = (unitType: string, count: number) => {
+    if (room) {
+      room.send('recruit', { unitType, count });
+    }
+  };
+
+  const build = (buildingType: string) => {
+    if (room) {
+      room.send('build', { buildingType });
+    }
+  };
+
+  const sendChat = () => {
+    if (room && chatInput.trim()) {
+      room.send('chat', { content: chatInput });
+      setChatInput('');
+    }
+  };
+
+  // ============================================
+  // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+  // ============================================
+
   const formatNumber = (num: number): string => {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
     if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
     return Math.floor(num).toString();
   };
 
-  // Проверка выбора расы
-  const [showRaceSelect, setShowRaceSelect] = useState(false);
-
-  useEffect(() => {
-    if (!userId) return;
-    const storedRace = localStorage.getItem('chatchain_fortress_race');
-    if (storedRace) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setRace(storedRace);
-    } else {
-      setShowRaceSelect(true);
-    }
-  }, [userId]);
-
-  const selectRace = (raceId: string) => {
-    setRace(raceId);
-    localStorage.setItem('chatchain_fortress_race', raceId);
-    setShowRaceSelect(false);
+  const getMapTemplate = (mapId: string) => {
+    return FANTASY_MAPS.find(m => m.id === mapId);
   };
 
+  // ============================================
+  // РЕНДЕРИНГ
+  // ============================================
+
+  // Проверка выбора расы
+  useEffect(() => {
+    if (!userId || !connected) return;
+    const storedRace = localStorage.getItem('chatchain_fortress_race');
+    if (!storedRace && currentPlayer) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowRaceSelect(true);
+    }
+  }, [userId, connected, currentPlayer]);
+
   // Выбор расы
-  if (showRaceSelect) {
+  if (showRaceSelect && connected) {
     return (
       <div className="fortress-page race-select">
         <h1>🏰 Выберите расу</h1>
         <div className="race-grid">
           {Object.entries(RACE_EMOJIS).map(([id, emoji]) => (
-            <div key={id} className="race-card" onClick={() => selectRace(id)}>
+            <div key={id} className="race-card" onClick={() => selectRace(id as RaceId)}>
               <span className="race-emoji">{emoji}</span>
               <span className="race-name">{id.charAt(0).toUpperCase() + id.slice(1)}</span>
+              <span className="race-bonus">
+                {id === 'human' && '💰 +20% экономика'}
+                {id === 'elf' && '✨ +50% магия'}
+                {id === 'dwarf' && '🛡️ +50% защита'}
+                {id === 'darkElf' && '⚔️ +40% атака'}
+                {id === 'undead' && '💀 +30% магия'}
+                {id === 'werewolf' && '🐺 +50% атака'}
+                {id === 'orc' && '💪 +40% атака'}
+                {id === 'mage' && '🔮 +100% магия'}
+                {id === 'vampire' && '🧛 +30% атака'}
+                {id === 'dragonborn' && '🐲 +40% экономика'}
+              </span>
             </div>
           ))}
         </div>
@@ -584,29 +605,24 @@ export default function FortressPage() {
   }
 
   // Загрузка
-  if (loading || !currentPlayer) {
+  if (loading || !connected || !currentPlayer || !currentMap) {
     return (
       <div className="fortress-page loading">
         <Castle className="w-16 h-16 animate-pulse" style={{ color: RACE_COLORS[race] || '#4a90d9' }} />
-        <p>Загрузка мира...</p>
+        <p>Подключение к серверу...</p>
+        {error && <p className="error">{error}</p>}
         <Styles />
       </div>
     );
   }
 
-  const playerColor = RACE_COLORS[race] || RACE_COLORS.human;
-
-  // Получаем объекты на выбранной клетке
-  const getCellObjects = (x: number, y: number) => {
-    const resource = resources.find(r => r.x === x && r.y === y);
-    const monster = monsters.find(m => m.x === x && m.y === y);
-    return { resource, monster };
-  };
+  const mapTemplate = getMapTemplate(currentPlayer.currentMapId);
+  const myHero = Array.from(currentPlayer.heroes.values())[0];
 
   return (
-    <div className="fortress-page">
+    <div className="fortress-page" style={{ background: `linear-gradient(135deg, ${mapTemplate?.bgColor || '#0d1117'} 0%, #161b22 100%)` }}>
       <BackgroundMusic />
-      
+
       {/* Шапка */}
       <header className="fortress-header">
         <div className="header-left">
@@ -615,12 +631,20 @@ export default function FortressPage() {
             <span className="race-icon">{RACE_EMOJIS[race]}</span>
             <div>
               <h1>{userName}</h1>
-              <span>⚔️ {formatNumber(currentPlayer.armyPower)} • 👣 {currentPlayer.movementPoints}/{currentPlayer.maxMovement}</span>
+              <span>
+                ⚔️ {myHero ? formatNumber(myHero.army.totalPower) : 0} •
+                👣 {myHero?.movementPoints || 0}/{myHero?.maxMovement || 5} •
+                Ход {state?.turn || 1}
+              </span>
             </div>
           </div>
         </div>
         <div className="header-right">
-          <Button size="sm" onClick={nextTurn} style={{ background: '#22c55e' }}>
+          <div className="map-selector" onClick={() => setShowMapSelect(true)}>
+            <MapIcon size={16} />
+            <span>{mapTemplate?.name || 'Карта'}</span>
+          </div>
+          <Button size="sm" onClick={endTurn} style={{ background: '#22c55e' }}>
             ⏭️ След. ход
           </Button>
         </div>
@@ -628,13 +652,24 @@ export default function FortressPage() {
 
       {/* Ресурсы */}
       <div className="resources-bar">
-        {['gold', 'stone', 'wood', 'iron', 'food', 'mana'].map(res => (
-          <div key={res} className="resource-item">
-            <span>{res === 'gold' ? '💰' : res === 'stone' ? '🪨' : res === 'wood' ? '🪵' : res === 'iron' ? '⚙️' : res === 'food' ? '🍖' : '🔮'}</span>
-            <span>{formatNumber(currentPlayer.resources[res] || 0)}</span>
+        {[
+          { key: 'gold', emoji: '💰' },
+          { key: 'stone', emoji: '🪨' },
+          { key: 'wood', emoji: '🪵' },
+          { key: 'iron', emoji: '⚙️' },
+          { key: 'food', emoji: '🍖' },
+          { key: 'mana', emoji: '🔮' },
+          { key: 'gems', emoji: '💎' },
+        ].map(res => (
+          <div key={res.key} className="resource-item">
+            <span>{res.emoji}</span>
+            <span>{formatNumber((currentPlayer.resources as any)[res.key] || 0)}</span>
           </div>
         ))}
       </div>
+
+      {/* Ошибки */}
+      {error && <div className="error-banner">{error}</div>}
 
       {/* Контент */}
       <div className="main-content">
@@ -643,6 +678,7 @@ export default function FortressPage() {
             <TabsTrigger value="map">🗺️ Карта</TabsTrigger>
             <TabsTrigger value="castle">🏰 Замок</TabsTrigger>
             <TabsTrigger value="stats">📊 Стата</TabsTrigger>
+            <TabsTrigger value="chat">💬 Чат</TabsTrigger>
           </TabsList>
 
           {/* Карта */}
@@ -657,174 +693,334 @@ export default function FortressPage() {
                   <ZoomOut size={16} />
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => { setZoom(1); setOffset({ x: 0, y: 0 }); }}>
-                  <Move size={16} />
+                  <RefreshCw size={16} />
                 </Button>
               </div>
 
               {/* SVG карта */}
-              <div 
+              <div
                 className="map-viewport"
                 onMouseDown={e => { setIsDragging(true); setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y }); }}
                 onMouseMove={e => { if (isDragging) setOffset({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y }); }}
                 onMouseUp={() => setIsDragging(false)}
                 onMouseLeave={() => setIsDragging(false)}
               >
-                <svg 
-                  width="100%" 
+                <svg
+                  width="100%"
                   height="100%"
-                  style={{ 
+                  style={{
                     transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
                     transformOrigin: 'center',
                     cursor: isDragging ? 'grabbing' : 'grab',
                   }}
                 >
-                  {map.map((row, y) => 
-                    row.map((cell, x) => {
-                      const { resource, monster } = getCellObjects(x, y);
-                      const isPlayerHere = currentPlayer.x === x && currentPlayer.y === y;
-                      const isSelected = selectedCell?.x === x && selectedCell?.y === y;
-                      
+                  {/* Связи между узлами */}
+                  {Array.from(currentMap.nodes.values()).map(node => (
+                    node.connections.map(connId => {
+                      const connNode = currentMap.nodes.get(connId);
+                      if (!connNode || node.id >= connId) return null;
                       return (
-                        <HexCell
-                          key={`${x}-${y}`}
-                          cell={cell}
-                          x={x}
-                          y={y}
-                          size={HEX_SIZE}
-                          isPlayerHere={isPlayerHere}
-                          isEnemyHere={false}
-                          playerColor={playerColor}
-                          resource={resource}
-                          monster={monster}
-                          isSelected={isSelected}
-                          onClick={() => {
-                            if (!isPlayerHere) {
-                              movePlayer(x, y);
-                            }
-                            if (monster && Math.abs(x - currentPlayer.x) <= 1 && Math.abs(y - currentPlayer.y) <= 1) {
-                              setSelectedTarget(monster);
-                            }
-                            if (resource && Math.abs(x - currentPlayer.x) <= 1 && Math.abs(y - currentPlayer.y) <= 1) {
-                              setSelectedTarget(resource);
-                            }
-                          }}
+                        <line
+                          key={`${node.id}-${connId}`}
+                          x1={node.x}
+                          y1={node.y}
+                          x2={connNode.x}
+                          y2={connNode.y}
+                          stroke="#444"
+                          strokeWidth={1}
+                          opacity={0.5}
                         />
                       );
                     })
-                  )}
+                  ))}
+
+                  {/* Узлы карты */}
+                  {Array.from(currentMap.nodes.values()).map(node => {
+                    const isMyNode = node.ownerId === room?.sessionId;
+                    const isEnemyNode = !!node.ownerId && !isMyNode;
+
+                    // Найти игрока на этом узле
+                    let playerHere: { name: string; color: string; emoji: string } | undefined;
+                    state?.players.forEach(p => {
+                      p.heroes.forEach(h => {
+                        if (h.currentNodeId === node.id) {
+                          playerHere = { name: p.name, color: p.color, emoji: RACE_EMOJIS[p.race] };
+                        }
+                      });
+                    });
+
+                    return (
+                      <MapNodeComponent
+                        key={node.id}
+                        node={node}
+                        isSelected={selectedNode?.id === node.id}
+                        isMyNode={isMyNode}
+                        isEnemyNode={isEnemyNode}
+                        myColor={currentPlayer.color}
+                        playerHere={playerHere}
+                        onClick={() => setSelectedNode(node)}
+                      />
+                    );
+                  })}
+
+                  {/* Телепорты и обелиски */}
+                  {Array.from(currentMap.teleports.values()).map(teleport => (
+                    <TeleportComponent
+                      key={teleport.id}
+                      teleport={teleport}
+                      isSelected={selectedTeleport?.id === teleport.id}
+                      onClick={() => setSelectedTeleport(teleport)}
+                    />
+                  ))}
                 </svg>
               </div>
 
               {/* Мини-карта */}
               <div className="minimap">
-                {map.map((row, y) => (
-                  <div key={y} className="minimap-row">
-                    {row.map((cell, x) => (
-                      <div
-                        key={x}
-                        className={`minimap-cell ${currentPlayer.x === x && currentPlayer.y === y ? 'player' : ''}`}
-                        style={{ background: cell.explored ? CELL_COLORS[cell.type] : '#1a1a1a' }}
-                      />
-                    ))}
-                  </div>
-                ))}
+                <div className="minimap-header">
+                  <span>{mapTemplate?.name}</span>
+                  <span>{currentMap.currentPlayerCount}/{currentMap.maxPlayers}</span>
+                </div>
               </div>
             </div>
+
+            {/* Панель выбранного узла */}
+            {selectedNode && (
+              <div className="selection-panel">
+                <div className="panel-header">
+                  <h3>{NODE_CONFIG[selectedNode.type]?.emoji} {selectedNode.name}</h3>
+                  <button onClick={() => setSelectedNode(null)}><X size={16} /></button>
+                </div>
+                <div className="panel-content">
+                  {selectedNode.monsterPower > 0 && (
+                    <p>🐉 Монстры: ⚔️{selectedNode.monsterPower}</p>
+                  )}
+                  {selectedNode.garrison > 0 && (
+                    <p>🛡️ Гарнизон: {selectedNode.garrison}</p>
+                  )}
+                  {selectedNode.ownerName && (
+                    <p>👑 Владелец: {selectedNode.ownerName}</p>
+                  )}
+                  {selectedNode.goldReward > 0 && (
+                    <p>💰 Награда: {selectedNode.goldReward}</p>
+                  )}
+                </div>
+                <div className="panel-actions">
+                  {myHero?.currentNodeId && selectedNode.connections.includes(myHero.currentNodeId) && (
+                    <>
+                      {selectedNode.monsterPower > 0 && (
+                        <Button size="sm" style={{ background: '#dc2626' }} onClick={() => attackNode(selectedNode.id)}>
+                          ⚔️ Атаковать
+                        </Button>
+                      )}
+                      {selectedNode.ownerId && selectedNode.ownerId !== room?.sessionId && (
+                        <Button size="sm" style={{ background: '#dc2626' }} onClick={() => attackNode(selectedNode.id)}>
+                          ⚔️ Атаковать (PvP)
+                        </Button>
+                      )}
+                      {!selectedNode.ownerId && !selectedNode.monsterPower && (
+                        <Button size="sm" style={{ background: '#22c55e' }} onClick={() => captureNode(selectedNode.id)}>
+                          🏴 Захватить
+                        </Button>
+                      )}
+                      {!selectedNode.ownerId && !selectedNode.monsterPower && myHero.movementPoints > 0 && (
+                        <Button size="sm" onClick={() => moveHero(selectedNode.id)}>
+                          🚶 Переместиться
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Панель телепорта */}
+            {selectedTeleport && (
+              <div className="selection-panel">
+                <div className="panel-header">
+                  <h3>{selectedTeleport.type === 'obelisk' ? '🗼' : '🌀'} {selectedTeleport.name}</h3>
+                  <button onClick={() => setSelectedTeleport(null)}><X size={16} /></button>
+                </div>
+                <div className="panel-content">
+                  <p>💰 Стоимость: {selectedTeleport.cost}</p>
+                  {selectedTeleport.type === 'obelisk' && (
+                    <p>🗼 Переход на другую карту</p>
+                  )}
+                </div>
+                <div className="panel-actions">
+                  {selectedTeleport.type === 'teleport' && (
+                    <Button size="sm" style={{ background: '#06b6d4' }} onClick={() => teleportHero(selectedTeleport.id)}>
+                      🌀 Телепортироваться
+                    </Button>
+                  )}
+                  {selectedTeleport.type === 'obelisk' && (
+                    <Button size="sm" style={{ background: '#8b5cf6' }} onClick={() => setShowMapSelect(true)}>
+                      🗺️ Выбрать карту
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
           </TabsContent>
 
           {/* Замок */}
           <TabsContent value="castle">
             <div className="castle-content">
               <h2>🏰 Ваш замок</h2>
-              <p>Уровень: 1</p>
-              <p>Армия: ⚔️ {formatNumber(currentPlayer.armyPower)}</p>
+              <div className="hero-info">
+                <h3>⚔️ {myHero?.name || 'Герой'}</h3>
+                <p>Уровень: {myHero?.level || 1}</p>
+                <p>Опыт: {myHero?.experience || 0}</p>
+                <p>⚔️ Сила армии: {myHero ? formatNumber(myHero.army.totalPower) : 0}</p>
+                <p>🗡️ Воины: {myHero?.army.warriors || 0} | 🏹 Лучники: {myHero?.army.archers || 0}</p>
+                <p>🐎 Кавалерия: {myHero?.army.cavalry || 0} | 🧙 Маги: {myHero?.army.mages || 0}</p>
+              </div>
+
+              <h3 style={{ marginTop: 20 }}>🏗️ Наем войск</h3>
+              <div className="recruit-grid">
+                <div className="recruit-card" onClick={() => recruit('warriors', 5)}>
+                  <span className="recruit-icon">🗡️</span>
+                  <span>Воины x5</span>
+                  <span className="recruit-cost">250💰 100🍖</span>
+                </div>
+                <div className="recruit-card" onClick={() => recruit('archers', 5)}>
+                  <span className="recruit-icon">🏹</span>
+                  <span>Лучники x5</span>
+                  <span className="recruit-cost">375💰 150🪵</span>
+                </div>
+                <div className="recruit-card" onClick={() => recruit('cavalry', 3)}>
+                  <span className="recruit-icon">🐎</span>
+                  <span>Кавалерия x3</span>
+                  <span className="recruit-cost">450💰 150🍖</span>
+                </div>
+                <div className="recruit-card" onClick={() => recruit('mages', 2)}>
+                  <span className="recruit-icon">🧙</span>
+                  <span>Маги x2</span>
+                  <span className="recruit-cost">400💰 60🔮</span>
+                </div>
+              </div>
+
+              <h3 style={{ marginTop: 20 }}>🏗️ Постройки</h3>
               <div className="building-list">
-                <div className="building-card">
-                  <span className="building-icon">⚔️</span>
-                  <span>Казарма</span>
-                  <Badge>Ур. 1</Badge>
-                </div>
-                <div className="building-card">
-                  <span className="building-icon">🌾</span>
-                  <span>Ферма</span>
-                  <Badge>Ур. 1</Badge>
-                </div>
-                <div className="building-card">
-                  <span className="building-icon">⛏️</span>
-                  <span>Шахта</span>
-                  <Badge>Ур. 1</Badge>
-                </div>
+                {[
+                  { id: 'barracks', name: 'Казарма', icon: '⚔️', cost: '200💰 100🪨' },
+                  { id: 'archery', name: 'Стрельбище', icon: '🏹', cost: '250💰 150🪵' },
+                  { id: 'stable', name: 'Конюшня', icon: '🐎', cost: '400💰 200🪵' },
+                  { id: 'mage_tower', name: 'Башня магов', icon: '🔮', cost: '500💰 300🪨' },
+                ].map(b => (
+                  <div key={b.id} className="building-card" onClick={() => build(b.id)}>
+                    <span className="building-icon">{b.icon}</span>
+                    <span>{b.name}</span>
+                    <span className="building-cost">{b.cost}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </TabsContent>
 
-          {/* Стата */}
+          {/* Статистика */}
           <TabsContent value="stats">
             <div className="stats-content">
-              <div className="stat-card">
-                <h3>⚔️ Армия</h3>
-                <p>Сила: {formatNumber(currentPlayer.armyPower)}</p>
-                <p>Побед: 0</p>
-                <p>Поражений: 0</p>
+              <div className="stat-card main-stat">
+                <h3>🏰 Fortress</h3>
+                <div className="stat-grid">
+                  <div><Trophy size={20} /> <span>Очки: {formatNumber(currentPlayer.stats.fortress.score)}</span></div>
+                  <div><Star size={20} /> <span>Победы: {currentPlayer.stats.fortress.wins}</span></div>
+                  <div><Skull size={20} /> <span>Поражения: {currentPlayer.stats.fortress.losses}</span></div>
+                  <div><Cog size={20} /> <span>Игр: {currentPlayer.stats.fortress.totalGames}</span></div>
+                  <div><Zap size={20} /> <span>Время: {Math.floor((currentPlayer.stats.fortress.playTime || 0) / 60)}ч</span></div>
+                </div>
               </div>
-              <div className="stat-card">
-                <h3>🗺️ Исследование</h3>
-                <p>Открыто клеток: {map.flat().filter(c => c.explored).length}</p>
-                <p>Захвачено ресурсов: {resources.filter(r => r.owner === userId).length}</p>
+
+              <div className="stat-row">
+                <div className="stat-card">
+                  <h3>🔫 Mafia</h3>
+                  <p>Победы: {currentPlayer.stats.mafia.wins}</p>
+                  <p>Поражения: {currentPlayer.stats.mafia.losses}</p>
+                </div>
+                <div className="stat-card">
+                  <h3>⚔️ Duel</h3>
+                  <p>Победы: {currentPlayer.stats.duel.wins}</p>
+                  <p>Поражения: {currentPlayer.stats.duel.losses}</p>
+                </div>
+              </div>
+
+              <div className="stat-row">
+                <div className="stat-card">
+                  <h3>🔗 Chain</h3>
+                  <p>Очки: {currentPlayer.stats.chain.score}</p>
+                  <p>Игр: {currentPlayer.stats.chain.totalGames}</p>
+                </div>
+                <div className="stat-card">
+                  <h3>🃏 Poker</h3>
+                  <p>Очки: {currentPlayer.stats.poker.score}</p>
+                  <p>Игр: {currentPlayer.stats.poker.totalGames}</p>
+                </div>
+              </div>
+
+              <div className="stat-card total-stat">
+                <h3>📊 Общий счёт</h3>
+                <p className="total-score">{formatNumber(currentPlayer.score)}</p>
+                <p>Битв выиграно: {currentPlayer.battlesWon}</p>
+                <p>Битв проиграно: {currentPlayer.battlesLost}</p>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Чат */}
+          <TabsContent value="chat">
+            <div className="chat-content">
+              <div className="chat-messages">
+                {chatMessages.map((msg, i) => (
+                  <div key={i} className="chat-message">{msg}</div>
+                ))}
+              </div>
+              <div className="chat-input-container">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={e => setChatInput(e.target.value)}
+                  onKeyPress={e => e.key === 'Enter' && sendChat()}
+                  placeholder="Сообщение..."
+                  className="chat-input"
+                />
+                <Button size="sm" onClick={sendChat}>📤</Button>
               </div>
             </div>
           </TabsContent>
         </Tabs>
       </div>
 
-      {/* Диалог цели */}
-      {selectedTarget && (
-        <div className="target-modal" onClick={() => setSelectedTarget(null)}>
-          <div className="target-content" onClick={e => e.stopPropagation()}>
-            {'power' in selectedTarget ? (
-              <>
-                <h3>{selectedTarget.emoji} {selectedTarget.name}</h3>
-                <p>Сила: ⚔️ {selectedTarget.power}</p>
-                <p>Награда: 💰 {selectedTarget.reward.gold} | ✨ {selectedTarget.reward.xp} XP</p>
-                <div className="target-actions">
-                  <Button variant="outline" onClick={() => setSelectedTarget(null)}>Отмена</Button>
-                  <Button style={{ background: '#dc2626' }} onClick={() => attackMonster(selectedTarget as Monster)}>
-                    ⚔️ Атаковать!
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                <h3>{RESOURCE_TYPES[(selectedTarget as ResourceNode).type].emoji} {RESOURCE_TYPES[(selectedTarget as ResourceNode).type].name}</h3>
-                <p>Производство:</p>
-                {Object.entries((selectedTarget as ResourceNode).production).map(([res, val]) => (
-                  <p key={res}>+{val} {res}/ход</p>
-                ))}
-                <div className="target-actions">
-                  <Button variant="outline" onClick={() => setSelectedTarget(null)}>Отмена</Button>
-                  <Button style={{ background: '#22c55e' }} onClick={() => captureResource(selectedTarget as ResourceNode)}>
-                    🏴 Захватить!
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Модальное окно выбора карты */}
+      {showMapSelect && (
+        <div className="modal-overlay" onClick={() => setShowMapSelect(false)}>
+          <div className="modal-content map-select-modal" onClick={e => e.stopPropagation()}>
+            <h2>🗺️ Выберите карту</h2>
+            <div className="maps-grid">
+              {FANTASY_MAPS.map(map => {
+                const gameMap = state?.maps.get(map.id);
+                const playerCount = gameMap?.currentPlayerCount || 0;
+                const isFull = playerCount >= 50;
+                const isCurrentMap = currentPlayer.currentMapId === map.id;
 
-      {/* Результат боя */}
-      {showBattle && battleResult && (
-        <div className="battle-result" onClick={() => { setShowBattle(false); setBattleResult(null); }}>
-          <div className="result-content">
-            <div className={`result-icon ${battleResult.won ? 'win' : 'lose'}`}>
-              {battleResult.won ? '🏆' : '💀'}
+                return (
+                  <div
+                    key={map.id}
+                    className={`map-card ${isFull ? 'full' : ''} ${isCurrentMap ? 'current' : ''}`}
+                    style={{ background: map.bgColor }}
+                    onClick={() => !isFull && !isCurrentMap && changeMap(map.id)}
+                  >
+                    <div className="map-name">{map.name}</div>
+                    <div className="map-desc">{map.description}</div>
+                    <div className="map-players">
+                      👥 {playerCount}/50 {isFull && '🔒'}
+                    </div>
+                    {isCurrentMap && <Badge>Текущая</Badge>}
+                  </div>
+                );
+              })}
             </div>
-            <h3>{battleResult.message}</h3>
-            {battleResult.won && (
-              <p className="loot">+{formatNumber(battleResult.loot.gold || 0)} 💰</p>
-            )}
-            <p>Потери: -{battleResult.losses} ⚔️</p>
-            <Button onClick={() => { setShowBattle(false); setBattleResult(null); }}>Продолжить</Button>
+            <Button variant="outline" onClick={() => setShowMapSelect(false)}>Закрыть</Button>
           </div>
         </div>
       )}
@@ -834,13 +1030,15 @@ export default function FortressPage() {
   );
 }
 
-// Стили
+// ============================================
+// СТИЛИ
+// ============================================
+
 function Styles() {
   return (
     <style jsx global>{`
       .fortress-page {
         min-height: 100vh;
-        background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d1117 100%);
         color: #ffffff;
       }
 
@@ -850,6 +1048,7 @@ function Styles() {
         align-items: center;
         justify-content: center;
         gap: 16px;
+        background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
       }
 
       .race-select h1 {
@@ -861,7 +1060,7 @@ function Styles() {
         display: grid;
         grid-template-columns: repeat(5, 1fr);
         gap: 16px;
-        max-width: 600px;
+        max-width: 800px;
       }
 
       .race-card {
@@ -887,7 +1086,15 @@ function Styles() {
 
       .race-name {
         font-size: 14px;
+        display: block;
         text-transform: capitalize;
+      }
+
+      .race-bonus {
+        font-size: 10px;
+        color: #888;
+        margin-top: 4px;
+        display: block;
       }
 
       /* Header */
@@ -901,7 +1108,7 @@ function Styles() {
         align-items: center;
       }
 
-      .header-left {
+      .header-left, .header-right {
         display: flex;
         align-items: center;
         gap: 12px;
@@ -927,6 +1134,21 @@ function Styles() {
         opacity: 0.7;
       }
 
+      .map-selector {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 8px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+      }
+
+      .map-selector:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
       /* Resources */
       .resources-bar {
         background: rgba(0, 0, 0, 0.4);
@@ -943,6 +1165,15 @@ function Styles() {
         gap: 6px;
         font-size: 13px;
         font-weight: 600;
+      }
+
+      /* Error banner */
+      .error-banner {
+        background: #dc2626;
+        color: white;
+        padding: 8px 16px;
+        text-align: center;
+        font-size: 14px;
       }
 
       /* Main Content */
@@ -1006,31 +1237,108 @@ function Styles() {
         z-index: 10;
       }
 
-      .minimap-row {
+      .minimap-header {
         display: flex;
-        gap: 1px;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 11px;
       }
 
-      .minimap-cell {
-        width: 6px;
-        height: 6px;
-        border-radius: 1px;
+      /* Selection Panel */
+      .selection-panel {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        background: rgba(0, 0, 0, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        padding: 16px;
+        min-width: 200px;
+        z-index: 20;
       }
 
-      .minimap-cell.player {
-        background: #4a90d9 !important;
+      .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .panel-header h3 {
+        font-size: 16px;
+      }
+
+      .panel-header button {
+        background: none;
+        border: none;
+        color: #888;
+        cursor: pointer;
+      }
+
+      .panel-content p {
+        margin-bottom: 6px;
+        font-size: 13px;
+      }
+
+      .panel-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
       }
 
       /* Castle & Stats */
-      .castle-content, .stats-content {
+      .castle-content, .stats-content, .chat-content {
         padding: 20px;
+        overflow-y: auto;
+        height: calc(100vh - 220px);
+      }
+
+      .hero-info {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 16px;
+        margin-top: 16px;
+      }
+
+      .recruit-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      .recruit-card {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .recruit-card:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-2px);
+      }
+
+      .recruit-icon {
+        font-size: 24px;
+        display: block;
+        margin-bottom: 8px;
+      }
+
+      .recruit-cost {
+        font-size: 11px;
+        color: #888;
+        display: block;
+        margin-top: 4px;
       }
 
       .building-list {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
         gap: 12px;
-        margin-top: 16px;
+        margin-top: 12px;
       }
 
       .building-card {
@@ -1038,12 +1346,20 @@ function Styles() {
         border-radius: 12px;
         padding: 16px;
         text-align: center;
+        cursor: pointer;
       }
 
       .building-icon {
         font-size: 32px;
         display: block;
         margin-bottom: 8px;
+      }
+
+      .building-cost {
+        font-size: 10px;
+        color: #888;
+        display: block;
+        margin-top: 4px;
       }
 
       .stat-card {
@@ -1057,8 +1373,68 @@ function Styles() {
         margin-bottom: 12px;
       }
 
-      /* Modals */
-      .target-modal, .battle-result {
+      .stat-grid > div {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .stat-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .total-stat {
+        text-align: center;
+        margin-top: 20px;
+      }
+
+      .total-score {
+        font-size: 36px;
+        font-weight: bold;
+        color: #ffd700;
+      }
+
+      /* Chat */
+      .chat-messages {
+        height: calc(100% - 60px);
+        overflow-y: auto;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+
+      .chat-message {
+        padding: 6px 0;
+        font-size: 13px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      .chat-input-container {
+        display: flex;
+        gap: 8px;
+      }
+
+      .chat-input {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        padding: 8px 12px;
+        color: white;
+        font-size: 14px;
+      }
+
+      .chat-input:focus {
+        outline: none;
+        border-color: #4a90d9;
+      }
+
+      /* Modal */
+      .modal-overlay {
         position: fixed;
         inset: 0;
         background: rgba(0, 0, 0, 0.9);
@@ -1068,49 +1444,63 @@ function Styles() {
         z-index: 100;
       }
 
-      .target-content, .result-content {
+      .modal-content {
         background: #1a1a2e;
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 16px;
         padding: 24px;
-        min-width: 280px;
-        text-align: center;
+        max-width: 90vw;
+        max-height: 80vh;
+        overflow-y: auto;
       }
 
-      .target-content h3, .result-content h3 {
-        font-size: 20px;
-        margin-bottom: 16px;
+      .map-select-modal h2 {
+        margin-bottom: 20px;
       }
 
-      .target-content p {
-        margin-bottom: 8px;
-      }
-
-      .target-actions {
-        display: flex;
+      .maps-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
         gap: 12px;
-        justify-content: center;
-        margin-top: 20px;
+        margin-bottom: 20px;
       }
 
-      .result-icon {
-        font-size: 64px;
-        margin-bottom: 16px;
+      .map-card {
+        border-radius: 12px;
+        padding: 16px;
+        cursor: pointer;
+        transition: all 0.3s;
+        border: 2px solid transparent;
       }
 
-      .result-icon.win {
-        animation: bounce 0.5s ease;
+      .map-card:hover:not(.full) {
+        transform: translateY(-3px);
+        border-color: #fff;
       }
 
-      @keyframes bounce {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.2); }
+      .map-card.full {
+        opacity: 0.5;
+        cursor: not-allowed;
       }
 
-      .loot {
-        font-size: 18px;
-        color: #fbbf24;
+      .map-card.current {
+        border-color: #22c55e;
+      }
+
+      .map-name {
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 6px;
+      }
+
+      .map-desc {
+        font-size: 10px;
+        opacity: 0.7;
         margin-bottom: 8px;
+      }
+
+      .map-players {
+        font-size: 11px;
       }
 
       /* Music Button */
@@ -1144,6 +1534,18 @@ function Styles() {
 
         .minimap {
           display: none;
+        }
+
+        .maps-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .recruit-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .stat-row {
+          grid-template-columns: 1fr;
         }
       }
     `}</style>
