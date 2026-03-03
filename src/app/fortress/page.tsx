@@ -400,17 +400,23 @@ export default function FortressPage() {
         setLoading(false);
 
         // Обработка изменений состояния
-        gameRoom.onStateChange((newState) => {
+        gameRoom.onStateChange((newState: any) => {
+          console.log('State update:', newState);
           setState(newState);
 
-          const player = newState.players.get(gameRoom.sessionId);
-          if (player) {
-            setCurrentPlayer(player);
-            setRace(player.race);
+          // Проверяем что players существует
+          if (newState.players && gameRoom.sessionId) {
+            const player = newState.players.get(gameRoom.sessionId);
+            if (player) {
+              setCurrentPlayer(player);
+              setRace(player.race);
 
-            const map = newState.maps.get(player.currentMapId);
-            if (map) {
-              setCurrentMap(map);
+              if (newState.maps && player.currentMapId) {
+                const map = newState.maps.get(player.currentMapId);
+                if (map) {
+                  setCurrentMap(map);
+                }
+              }
             }
           }
         });
