@@ -1,0 +1,846 @@
+{
+  "players": {
+    "tYpsd_9bl": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "node_4",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "zLftjonDd": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "node_20",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "zS26rYJDD": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "node_9",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "wrtJVDITs": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "node_24",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "RbaN5LT9C": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 512,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 106,
+        "mana": 50
+      },
+      "castleNodeId": "node_18",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "ZTMJVRD22": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "node_13",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "4jB5rLA8B": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "node_0",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "TzrDBbh2Q": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "node_6",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "o1um2I5du": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "node_16",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "3WkFdQECI": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "node_7",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "IS8UTrd03": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 512,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 106,
+        "mana": 50
+      },
+      "castleNodeId": "node_23",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "g0S9WxO4I": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "node_19",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "ppqYK0Gtr": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "node_14",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "1jCXoxBJS": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "node_1",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "q5wwz4Q6D": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "node_17",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "mUjMHXpje": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 512,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 106,
+        "mana": 50
+      },
+      "castleNodeId": "node_3",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "_-i2evhBG": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 512,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 106,
+        "mana": 50
+      },
+      "castleNodeId": "node_22",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "m29Ag5xwm": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "node_8",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "wJ-8STFl5": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "node_15",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "InaaZMZlY": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "node_2",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "ElXvlwKyL": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "node_10",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "y0jYNhzBq": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "node_21",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "z7humChfZ": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 512,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 106,
+        "mana": 50
+      },
+      "castleNodeId": "node_11",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "o2L7Ez3aj": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "node_5",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "O5uXlT7Wr": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "mjur_p1_r": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "pMdo-Xrz4": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "LRUcCC8qi": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 512,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 106,
+        "mana": 50
+      },
+      "castleNodeId": "",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "C-Go555Cl": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "6twqYZG9c": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "7_R_OPc_C": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "1zMSHw9g1": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "RT_F2qPhZ": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "Tq4Q4x8k9": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 512,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 106,
+        "mana": 50
+      },
+      "castleNodeId": "",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "iFAyvd4WA": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "ztGtdk-j0": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "GK3iEKE_j": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "GdcTpu7T5": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "vW7B8tSj2": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 512,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 106,
+        "mana": 50
+      },
+      "castleNodeId": "",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    },
+    "HINPAUOuZ": {
+      "id": "guest-1772479056133-ux564obvq",
+      "name": "Гость_5129",
+      "race": "human",
+      "color": "#4a90d9",
+      "resources": {
+        "gold": 500,
+        "stone": 200,
+        "wood": 200,
+        "iron": 50,
+        "food": 100,
+        "mana": 50
+      },
+      "castleNodeId": "",
+      "score": 0,
+      "battlesWon": 0,
+      "battlesLost": 0
+    }
+  },
+  "nodes": {
+    "node_0": {
+      "ownerId": "4jB5rLA8B",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_1": {
+      "ownerId": "1jCXoxBJS",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_2": {
+      "ownerId": "InaaZMZlY",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_3": {
+      "ownerId": "mUjMHXpje",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_4": {
+      "ownerId": "tYpsd_9bl",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_5": {
+      "ownerId": "o2L7Ez3aj",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_6": {
+      "ownerId": "TzrDBbh2Q",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_7": {
+      "ownerId": "3WkFdQECI",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_8": {
+      "ownerId": "m29Ag5xwm",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_9": {
+      "ownerId": "zS26rYJDD",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_10": {
+      "ownerId": "ElXvlwKyL",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_11": {
+      "ownerId": "z7humChfZ",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_13": {
+      "ownerId": "ZTMJVRD22",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_14": {
+      "ownerId": "ppqYK0Gtr",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_15": {
+      "ownerId": "wJ-8STFl5",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_16": {
+      "ownerId": "o1um2I5du",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_17": {
+      "ownerId": "q5wwz4Q6D",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_18": {
+      "ownerId": "RbaN5LT9C",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_19": {
+      "ownerId": "g0S9WxO4I",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_20": {
+      "ownerId": "zLftjonDd",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_21": {
+      "ownerId": "y0jYNhzBq",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_22": {
+      "ownerId": "_-i2evhBG",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_23": {
+      "ownerId": "IS8UTrd03",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    },
+    "node_24": {
+      "ownerId": "wrtJVDITs",
+      "ownerName": "Гость_5129",
+      "garrison": 50
+    }
+  }
+}

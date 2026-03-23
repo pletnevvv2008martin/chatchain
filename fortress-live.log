@@ -1,0 +1,32 @@
+✅ .env loaded.
+
+   ___      _                                    ___   _ _____
+  / __\___ | |_   _ ___  ___ _   _ ___   __   __/ _ \ / |___  |
+ / /  / _ \| | | | / __|/ _ \ | | / __|  \ \ / / | | || |  / /
+/ /__| (_) | | |_| \__ \  __/ |_| \__ \   \ V /| |_| || | / /
+\____/\___/|_|\__, |___/\___|\__,_|___/    \_/  \___(_)_|/_/
+              |___/
+
+             \u00B7 Multiplayer Framework for Node.js \u00B7
+
+\u{1f496} Consider becoming a Sponsor on GitHub \u2192 https://github.com/sponsors/endel
+\u{1f31f} Give us a star on GitHub \u2192 https://github.com/colyseus/colyseus
+\u2601\uFE0F  Deploy and scale your project on Colyseus Cloud \u2192 https://cloud.colyseus.io
+
+
+╔════════════════════════════════════════════╗
+║     🏰 Fortress Game Server Started!       ║
+║                                            ║
+║  Colyseus Server running on port 2567      ║
+║  WebSocket: ws://localhost:2567            ║
+║                                            ║
+║  Available rooms:                          ║
+║  - fortress (main game room)               ║
+╚════════════════════════════════════════════╝
+  
+🏰 Fortress Room created!
+🏰 Loaded 0 players
+
+🛑 Received SIGTERM, shutting down...
+🏰 Fortress Room disposed
+error during shutdown: already_shutting_down

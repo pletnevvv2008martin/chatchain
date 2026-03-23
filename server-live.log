@@ -1,0 +1,58 @@
+DEPRECATION WARNING: 'pingInterval', 'pingMaxRetries', 'server', and 'verifyClient' Server options will be permanently moved to WebSocketTransport on v0.15
+new Server({
+  transport: new WebSocketTransport({
+    pingInterval: ...,
+    pingMaxRetries: ...,
+    server: ...,
+    verifyClient: ...
+  })
+})
+👉 Documentation: https://docs.colyseus.io/server/transport/
+
+       ___      _
+      / __\___ | |_   _ ___  ___ _   _ ___
+     / /  / _ \| | | | / __|/ _ \ | | / __|
+    / /__| (_) | | |_| \__ \  __/ |_| \__ \
+    \____/\___/|_|\__, |___/\___|\__,_|___/
+                  |___/
+
+     \u00B7 Multiplayer Framework for Node.js \u00B7
+
+\u{1f496} Consider becoming a Sponsor on GitHub \u2192 https://github.com/sponsors/endel
+\u{1f31f} Give us a star on GitHub \u2192 https://github.com/colyseus/colyseus
+\u2601\uFE0F  Deploy and scale your project on Colyseus Cloud \u2192 https://cloud.colyseus.io
+
+
+Error
+    at serve (unknown)
+    at <anonymous> (node:_http_server:271:39)
+    at <anonymous> (node:_http_server:248:33)
+    at listen (/home/z/my-project/node_modules/@colyseus/ws-transport/build/WebSocketTransport.mjs:37:17)
+    at <anonymous> (/home/z/my-project/node_modules/@colyseus/core/build/Server.mjs:73:22)
+    at Promise (unknown:1:11)
+    at listen (/home/z/my-project/node_modules/@colyseus/core/build/Server.mjs:71:16)
+    at processTicksAndRejections (unknown:7:39)
+32 |       this.server.on("listening", () => this.autoTerminateUnresponsiveClients(this.pingIntervalMS, this.pingMaxRetries));
+33 |       this.server.on("close", () => clearInterval(this.pingInterval));
+34 |     }
+35 |   }
+36 |   listen(port, hostname, backlog, listeningListener) {
+37 |     this.server.listen(port, hostname, backlog, listeningListener);
+     ^
+error: Failed to start server. Is port 2567 in use?
+ syscall: "listen",
+   errno: 0,
+    code: "EADDRINUSE"
+
+      at serve (unknown:1:1)
+      at node:_http_server:271:39
+      at node:_http_server:248:33
+      at listen (/home/z/my-project/node_modules/@colyseus/ws-transport/build/WebSocketTransport.mjs:37:17)
+      at /home/z/my-project/node_modules/@colyseus/core/build/Server.mjs:95:12
+      at Promise (unknown:1:11)
+      at listen (/home/z/my-project/node_modules/@colyseus/core/build/Server.mjs:91:10)
+      at processTicksAndRejections (unknown:7:39)
+
+
+🛑 Received SIGTERM, shutting down...
+error during shutdown: already_shutting_down

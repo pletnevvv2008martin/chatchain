@@ -1,0 +1,46 @@
+{
+  "userId": "guest-1772386281305-nzihzd1kn",
+  "userName": "Гость_6016",
+  "race": "undead",
+  "createdAt": "2026-03-01T17:33:28.432Z",
+  "lastUpdate": "2026-03-01T18:22:14.609Z",
+  "buildings": {
+    "castle": 1,
+    "barracks": 1,
+    "farm": 1,
+    "mine": 1,
+    "lumbermill": 1,
+    "warehouse": 1
+  },
+  "resources": {
+    "gold": 528,
+    "stone": 218,
+    "wood": 225,
+    "iron": 50,
+    "food": 133,
+    "mana": 58
+  },
+  "resourceLimits": {
+    "gold": 2500,
+    "stone": 2500,
+    "wood": 2500,
+    "iron": 1500,
+    "food": 2000,
+    "mana": 150
+  },
+  "army": {
+    "warriors": 10,
+    "archers": 0,
+    "cavalry": 0,
+    "mages": 0,
+    "totalPower": 100
+  },
+  "heroes": [],
+  "stats": {
+    "battlesWon": 0,
+    "battlesLost": 0,
+    "resourcesCollected": 0,
+    "buildingsBuilt": 6
+  },
+  "lastResourceCollection": "2026-03-01T18:16:35.250Z"
+}
