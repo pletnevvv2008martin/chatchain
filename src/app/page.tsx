@@ -922,7 +922,7 @@ export default function ChatPage() {
               }
             } catch (error) {
               console.error('Error sending voice message:', error);
-              alert('Ошибка при отправке голосового сообщения');
+              alert('Ошибка при отправк�� голосового сообщения');
             }
           };
           reader.readAsDataURL(blob);
@@ -1710,7 +1710,7 @@ export default function ChatPage() {
             hp: user.xp || 0,
           }}
           onGiftSent={async (gift: any) => {
-            // Обновляем баланс пользователя
+            // Обновляем баланс по��ьзователя
             const updatedUser = { ...user, xp: gift.senderNewHp };
             localStorage.setItem('chatchain_user', JSON.stringify(updatedUser));
             setUser(updatedUser);
