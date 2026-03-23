@@ -759,6 +759,53 @@ Stage Summary:
 ---
 ## Текущий статус: СТАБИЛЬНЫЙ ✅
 ## VPS: http://179.61.145.218:3000
-## PM2: только chatchain-site (порт 3000)
-## Диск: 93% использовано
-## Последнее обновление: 2025-03-13
+## GitHub: https://github.com/pletnevvv2008martin/chatchain
+## PM2: chatchain-site (порт 3000)
+## Диск VPS: 78% (2.1GB свободно)
+## Последнее обновление: 2025-03-23
+
+### 🔑 Доступы:
+
+**VPS:**
+- IP: 179.61.145.218
+- Логин: root
+- Пароль: 0B9aYF6G32K7
+
+**GitHub:**
+- Пользователь: pletnevvv2008martin
+- Репозиторий: https://github.com/pletnevvv2008martin/chatchain
+
+### 🎮 Игры (4):
+| # | Игра | URL |
+|---|------|-----|
+| 1 | Цепь | /chain |
+| 2 | Мафия | /mafia |
+| 3 | Любовь | /dating |
+| 4 | Покер | /poker |
+
+### 🗑️ Удалены:
+- Дуэли /duel
+- Казино /game
+- Fortress /fortress
+- Surviv.io /surviv
+
+### 🔧 Функционал:
+- ✅ Чат с комнатами
+- ✅ Реакции, ответы, редактирование сообщений
+- ✅ Голосовые сообщения
+- ✅ GIF изображения
+- ✅ Превью ссылок (OpenGraph)
+- ✅ Музыкальный плеер (YouTube, синхронизация)
+- ✅ WebSocket мультиплеер
+- ✅ Сворачиваемый Header
+- ✅ Тёмная/светлая тема
+- ✅ Мультиязычность (RU/EN)
+- ✅ Админ-панель
+- ✅ Ежедневные награды
+
+### 🚀 Развёртывание на новом VPS:
+```bash
+git clone https://github.com/pletnevvv2008martin/chatchain.git
+cd chatchain && npm install && npm run build
+pm2 start npm --name chatchain-site -- start && pm2 save
+```
