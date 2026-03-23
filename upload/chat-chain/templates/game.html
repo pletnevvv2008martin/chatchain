@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="{{ theme }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatChain - Игра</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="{{ 'dark-theme' if theme == 'dark' else '' }}">
+    <div class="app-container">
+        <header class="main-header">
+            <div class="header-content">
+                <div class="logo">
+                    <h1>Chat<span>Chain</span></h1>
+                </div>
+
+                <div class="header-nav">
+                    <a href="{{ url_for('index') }}" class="nav-link">Чат</a>
+                    <a href="{{ url_for('game') }}" class="nav-link active">Игра</a>
+                    <a href="{{ url_for('dating') }}" class="nav-link">Знакомства</a>
+                </div>
+
+                <div class="user-info">
+                    <span class="user-nickname">{{ nickname }}</span>
+                    <button class="theme-toggle" id="themeToggle">
+                        <span class="theme-icon">{{ '☀️' if theme == 'dark' else '🌙' }}</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="game-content">
+            <div class="game-stats-card">
+                <h2>Моя статистика</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-label">Инвестировано</span>
+                        <span class="stat-value" id="invested">{{ player.invested }} ₽</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Выиграно</span>
+                        <span class="stat-value" id="earned">{{ player.earned }} ₽</span>
+                    </div>
+                    <div class="stat-item highlight">
+                        <span class="stat-label">Баланс</span>
+                        <span class="stat-value" id="balance">{{ player.balance }} ₽</span>
+                    </div>
+                </div>
+
+                {% if player.balance >= 500 %}
+                <button class="withdraw-btn" id="withdrawBtn">
+                    Вывести {{ player.balance }} ₽
+                </button>
+                {% endif %}
+            </div>
+
+            <div class="cells-grid">
+                {% for cell in cells %}
+                <div class="game-cell" data-level="{{ cell.level }}" data-status="{{ cell.status }}">
+                    <div class="cell-header">
+                        <span class="cell-level">Уровень {{ cell.level }}</span>
+                        <span class="cell-badge status-{{ cell.status }}">
+                            {% if cell.status == 'available' %}Доступно
+                            {% elif cell.status == 'occupied' %}Ожидание
+                            {% elif cell.status == 'completed' %}Завершено
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <div class="cell-amount">
+                        <span class="amount-value">{{ cell.amount }}</span>
+                        <span class="amount-currency">₽</span>
+                    </div>
+
+                    <div class="cell-multiplier">
+                        x1.5 ({{ cell.amount * 1.5 }} ₽)
+                    </div>
+
+                    <div class="cell-timer" id="timer-{{ cell.level }}"
+                         data-next="{% if cell.next_available %}{{ cell.next_available.isoformat() }}{% endif %}">
+                        {% if cell.next_available and cell.next_available > now %}
+                            <span class="timer-label">Доступна через:</span>
+                            <span class="timer-value"></span>
+                        {% else %}
+                            <span class="timer-available">Доступно сейчас</span>
+                        {% endif %}
+                    </div>
+
+                    <button class="join-cell-btn"
+                            data-level="{{ cell.level }}"
+                            data-amount="{{ cell.amount }}"
+                            {% if cell.status != 'available' %}disabled{% endif %}>
+                        Инвестировать
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
+    <script src="{{ url_for('static', filename='js/game.js') }}"></script>
+</body>
+</html>

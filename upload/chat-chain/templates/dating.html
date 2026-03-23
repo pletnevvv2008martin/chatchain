@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="{{ theme }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatChain - Знакомства</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="{{ 'dark-theme' if theme == 'dark' else '' }}">
+    <div class="app-container">
+        <header class="main-header">
+            <div class="header-content">
+                <div class="logo">
+                    <h1>Chat<span>Chain</span></h1>
+                </div>
+
+                <div class="header-nav">
+                    <a href="{{ url_for('index') }}" class="nav-link">Чат</a>
+                    <a href="{{ url_for('game') }}" class="nav-link">Игра</a>
+                    <a href="{{ url_for('dating') }}" class="nav-link active">Знакомства</a>
+                </div>
+
+                <div class="user-info">
+                    <span class="user-nickname">{{ nickname }}</span>
+                    <button class="theme-toggle" id="themeToggle">
+                        <span class="theme-icon">{{ '☀️' if theme == 'dark' else '🌙' }}</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="dating-main">
+            <div class="profile-column">
+                <h2>Твой профиль</h2>
+
+                {% if not profile %}
+                <div class="profile-form" id="profileForm">
+                    <div class="form-group">
+                        <label>Возраст</label>
+                        <input type="number" id="age" min="18" max="100" placeholder="Ваш возраст">
+                    </div>
+                    <div class="form-group">
+                        <label>Пол</label>
+                        <select id="gender">
+                            <option value="male">Мужской</option>
+                            <option value="female">Женский</option>
+                            <option value="other">Другой</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>О себе</label>
+                        <textarea id="bio" placeholder="Расскажите о себе..." rows="4"></textarea>
+                    </div>
+                    <button class="save-profile-btn" id="saveProfile">Создать профиль</button>
+                </div>
+                {% else %}
+                <div class="profile-view" id="profileView">
+                    <div class="profile-info">
+                        <p><strong>Возраст:</strong> {{ profile.age }}</p>
+                        <p><strong>Пол:</strong> {% if profile.gender == 'male' %}Мужской{% elif profile.gender == 'female' %}Женский{% else %}Другой{% endif %}</p>
+                        <p><strong>О себе:</strong> {{ profile.bio }}</p>
+                    </div>
+                    <button class="edit-profile-btn" id="editProfile">Редактировать</button>
+                </div>
+
+                <div class="profile-form" id="profileEditForm" style="display: none;">
+                    <div class="form-group">
+                        <label>Возраст</label>
+                        <input type="number" id="editAge" min="18" max="100" value="{{ profile.age }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Пол</label>
+                        <select id="editGender">
+                            <option value="male" {% if profile.gender == 'male' %}selected{% endif %}>Мужской</option>
+                            <option value="female" {% if profile.gender == 'female' %}selected{% endif %}>Женский</option>
+                            <option value="other" {% if profile.gender == 'other' %}selected{% endif %}>Другой</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>О себе</label>
+                        <textarea id="editBio" rows="4">{{ profile.bio }}</textarea>
+                    </div>
+                    <button class="update-profile-btn" id="updateProfile">Сохранить</button>
+                    <button class="cancel-edit-btn" id="cancelEdit">Отмена</button>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="dating-column">
+                <div class="dating-controls">
+                    <button class="search-dating-btn" id="searchDating">
+                        <span>❤️</span> Найти пару
+                    </button>
+                    <button class="stop-dating-btn" id="stopDating" style="display: none;">
+                        <span>⏹️</span> Остановить поиск
+                    </button>
+                </div>
+
+                <div class="waiting-status" id="waitingStatus" style="display: none;">
+                    <p>⏳ Ищем пару...</p>
+                </div>
+
+                <div class="dating-interface" id="datingInterface" style="display: none;">
+                    <div class="dating-status">
+                        <div class="partner-info">
+                            <span class="partner-name" id="datingPartnerName"></span>
+                            <span class="partner-status" id="partnerStatus">отвечает на вопросы</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="questionProgress" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="question-container" id="questionContainer">
+                        <h3 id="questionText"></h3>
+                        <div class="options-container" id="optionsContainer"></div>
+                    </div>
+
+                    <div class="results-container" id="resultsContainer" style="display: none;">
+                        <h3>Результаты</h3>
+                        <div class="compatibility-score" id="compatibilityScore"></div>
+
+                        <div class="sympathy-section">
+                            <button class="send-sympathy-btn" id="sendSympathy">
+                                <span>❤️</span> Отправить симпатию
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="private-chat" id="privateChat" style="display: none;">
+                    <div class="private-chat-header">
+                        <h3>Чат с <span id="privateChatPartner"></span> ❤️</h3>
+                        <button class="close-chat-btn" id="closePrivateChat">✕</button>
+                    </div>
+                    <div class="private-messages" id="privateMessages"></div>
+                    <div class="private-input">
+                        <input type="text" id="privateMessageInput" placeholder="Введите сообщение...">
+                        <button id="sendPrivateMessage">➤</button>
+                    </div>
+                </div>
+
+                <div class="match-notification" id="matchNotification" style="display: none;">
+                    <div class="match-content">
+                        <h2>💕 Это взаимно! 💕</h2>
+                        <p id="matchMessage"></p>
+                        <button class="open-chat-btn" id="openPrivateChat">Открыть чат</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="matches-column">
+                <h2>Твои мэтчи</h2>
+                <div class="matches-list" id="matchesList">
+                    {% for match in matches %}
+                    <div class="match-item" data-partner="{{ match.user2 if match.user1 == nickname else match.user1 }}" data-room="{{ match.room_id }}">
+                        <div class="match-avatar">❤️</div>
+                        <div class="match-info">
+                            <span class="match-name">
+                                {{ match.user2 if match.user1 == nickname else match.user1 }}
+                            </span>
+                            <span class="match-compatibility">
+                                Совместимость: {{ match.compatibility }}%
+                            </span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="no-matches">Пока нет мэтчей</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
+    <script src="{{ url_for('static', filename='js/dating.js') }}"></script>
+</body>
+</html>

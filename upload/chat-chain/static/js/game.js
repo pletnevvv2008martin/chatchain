@@ -1,0 +1,118 @@
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Game.js loaded');
+
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.querySelector('.theme-icon');
+    const withdrawBtn = document.getElementById('withdrawBtn');
+
+    const savedTheme = localStorage.getItem('theme') || document.body.classList.contains('dark-theme') ? 'dark' : 'light';
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-theme');
+        if (themeIcon) themeIcon.textContent = '☀️';
+    } else {
+        if (themeIcon) themeIcon.textContent = '🌙';
+    }
+
+    if (themeToggle) {
+        themeToggle.addEventListener('click', function() {
+            document.body.classList.toggle('dark-theme');
+            const isDark = document.body.classList.contains('dark-theme');
+
+            if (themeIcon) {
+                themeIcon.textContent = isDark ? '☀️' : '🌙';
+            }
+
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+
+            fetch('/api/theme', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ theme: isDark ? 'dark' : 'light' })
+            }).catch(error => console.error('Error saving theme:', error));
+        });
+    }
+
+    function updateTimers() {
+        document.querySelectorAll('[id^="timer-"]').forEach(timer => {
+            const nextTimeStr = timer.dataset.next;
+
+            if (nextTimeStr && nextTimeStr !== 'None') {
+                const nextTime = new Date(nextTimeStr);
+                const now = new Date();
+
+                if (nextTime > now) {
+                    const diff = nextTime - now;
+                    const hours = Math.floor(diff / (1000 * 60 * 60));
+                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+                    const timerValue = timer.querySelector('.timer-value');
+                    if (timerValue) {
+                        timerValue.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    }
+                } else {
+                    timer.innerHTML = '<span class="timer-available">Доступно сейчас</span>';
+                }
+            }
+        });
+    }
+
+    setInterval(updateTimers, 1000);
+
+    document.querySelectorAll('.join-cell-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const level = this.dataset.level;
+            const amount = this.dataset.amount;
+
+            this.disabled = true;
+            const originalText = this.textContent;
+            this.textContent = 'Обработка...';
+
+            fetch(`/api/game/join/${level}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(data.message || '✅ Успешно!', 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showNotification('❌ ' + (data.error || 'Ошибка'), 'error');
+                    this.disabled = false;
+                    this.textContent = originalText;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('❌ Ошибка соединения', 'error');
+                this.disabled = false;
+                this.textContent = originalText;
+            });
+        });
+    });
+
+    if (withdrawBtn) {
+        withdrawBtn.addEventListener('click', function() {
+            const balance = document.getElementById('balance').textContent;
+            if (confirm(`Вы действительно хотите вывести ${balance}?`)) {
+                showNotification('✅ Заявка на вывод создана', 'success');
+            }
+        });
+    }
+
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+});

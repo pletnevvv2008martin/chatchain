@@ -1,0 +1,13 @@
+{
+  "users": [
+    {
+      "id": "admin-vi4hdd4jsmp",
+      "nickname": "Martin",
+      "password": "admin123",
+      "createdAt": 1772267699013,
+      "role": "admin",
+      "xp": 1000000,
+      "points": 5000
+    }
+  ]
+}
